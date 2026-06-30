@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import configparser
 from datetime import UTC, datetime
 import fnmatch
 import gzip
@@ -234,6 +235,12 @@ def first_existing_path(repo_dir: Path, ref: str, candidates: list[str]) -> str:
     raise ValueError(f"none of the candidate paths exist for {ref}: {', '.join(candidates)}")
 
 
+def parse_flatpak_metadata(repo_dir: Path, ref: str) -> configparser.ConfigParser:
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read_string(repo_cat(repo_dir, ref, "/metadata").decode("utf-8"))
+    return parser
+
+
 def build_component_xml(
     repo_dir: Path,
     ref: str,
@@ -249,6 +256,7 @@ def build_component_xml(
         ],
     )
     component = ET.fromstring(repo_cat(repo_dir, ref, metainfo_path))
+    metadata = parse_flatpak_metadata(repo_dir, ref)
 
     icon_candidates = [
         f"/files/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
@@ -283,6 +291,19 @@ def build_component_xml(
         stock = ET.Element("icon", {"type": "stock"})
         stock.text = package["app_id"]
         component.insert(0, stock)
+
+    existing_bundle = component.find("bundle")
+    if existing_bundle is None:
+        bundle_attrs = {"type": "flatpak"}
+        runtime = metadata.get("Application", "runtime", fallback="")
+        sdk = metadata.get("Application", "sdk", fallback="")
+        if runtime:
+            bundle_attrs["runtime"] = runtime
+        if sdk:
+            bundle_attrs["sdk"] = sdk
+        bundle = ET.Element("bundle", bundle_attrs)
+        bundle.text = ref
+        component.append(bundle)
 
     if package["screenshots"]:
         screenshots_node = component.find("screenshots")
