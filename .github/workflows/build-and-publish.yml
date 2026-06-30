@@ -72,18 +72,23 @@ jobs:
           gpgconf --kill gpg-agent
           gpgconf --launch gpg-agent
 
-          keygrip="$(
+          keygrips="$(
             gpg --batch --with-colons --with-keygrip --list-secret-keys "${SLOPHUB_GPG_KEY_ID}" \
-              | awk -F: '$1 == "grp" { print $10; exit }'
+              | awk -F: '$1 == "grp" { print $10 }'
           )"
 
-          if [ -z "${keygrip}" ]; then
-            echo "Could not resolve keygrip for ${SLOPHUB_GPG_KEY_ID}" >&2
+          if [ -z "${keygrips}" ]; then
+            echo "Could not resolve keygrips for ${SLOPHUB_GPG_KEY_ID}" >&2
             exit 1
           fi
 
           preset_passphrase="$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase"
-          "${preset_passphrase}" --preset --passphrase "${SLOPHUB_GPG_PASSPHRASE}" "${keygrip}"
+          while IFS= read -r keygrip; do
+            [ -n "${keygrip}" ] || continue
+            "${preset_passphrase}" --preset --passphrase "${SLOPHUB_GPG_PASSPHRASE}" "${keygrip}"
+          done <<EOF
+          ${keygrips}
+          EOF
 
       - name: Build Flatpak repository
         env:
