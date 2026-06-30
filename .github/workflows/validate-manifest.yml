@@ -1,0 +1,40 @@
+name: Validate Flatpak Manifest
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/validate-manifest.yml"
+      - "manifests/**"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      options: --privileged
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate manifest
+        env:
+          SLOPHUB_MANIFEST_PATH: ${{ vars.SLOPHUB_MANIFEST_PATH }}
+        run: |
+          set -euo pipefail
+
+          manifest_path="${SLOPHUB_MANIFEST_PATH:-manifests/app.yml}"
+          if [ ! -f "${manifest_path}" ]; then
+            echo "Manifest not found: ${manifest_path}" >&2
+            exit 1
+          fi
+
+          mkdir -p build-test
+          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder \
+            --stop-at=modules \
+            --force-clean \
+            --install-deps-from=flathub \
+            build-test \
+            "${manifest_path}"
