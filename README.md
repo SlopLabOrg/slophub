@@ -1,114 +1,81 @@
 # Slophub
 
-GitHub repository template for hosting a Flatpak repository named `Slophub` with GitHub Actions and GitHub Pages.
+This repository is used to make Flatpak apps available through the `Slophub` remote.
 
-The structure follows the flow described in the official Flatpak documentation for hosting OSTree repositories: build the repository with `flatpak-builder`, update it with `flatpak build-update-repo`, sign it with GPG, and publish the static artifacts over HTTP.
+If you want your app to be available here, the requirement is simple: your project must publish a `.flatpak` file in a GitHub release.
 
-Official reference:
+## How to add your app
 
-- https://docs.flatpak.org/en/latest/hosting-a-repository.html
+1. Create a `manifests/<APP_ID>.json` file.
+2. Point that file to your project's GitHub release.
+3. Commit and push.
+4. CI will download the `.flatpak`, import it into the `Slophub` remote, and publish an `<APP_ID>.flatpakref`.
 
-## What this repository provides
+## Manifest format
 
-- validation workflow for pull requests
-- build and publish workflow for GitHub Pages
-- automatic generation of:
-  - `slophub.flatpakrepo`
-  - `<APP_ID>.flatpakref`
-  - `repo/` with the OSTree contents
-  - `index.html` for installation
+Example:
 
-## Structure
-
-```text
-.github/workflows/
-  build-and-publish.yml
-  validate-manifest.yml
-manifests/
-  README.md
-scripts/
-  render-flatpak-metadata.sh
+```json
+{
+  "app-id": "dev.parquetta.Parquetta",
+  "branch": "master",
+  "title": "Parquetta",
+  "description": "Preview and query Parquet files with DuckDB.",
+  "homepage": "https://github.com/ogregorio/parquetta",
+  "icon-url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/Parquetta.svg",
+  "source": {
+    "type": "github-release-asset",
+    "repository": "ogregorio/parquetta",
+    "release": "latest",
+    "asset": "parquetta-*.flatpak"
+  }
+}
 ```
 
-## How to use
+## Fields
 
-1. Add the Flatpak manifest under `manifests/`.
-2. Configure GitHub Pages to use `GitHub Actions` as the source.
-3. Create the repository variables below in `Settings > Secrets and variables > Actions > Variables`.
-4. Create the GPG secrets in `Settings > Secrets and variables > Actions > Secrets`.
-5. Push to the `main` branch.
+- `app-id`: Flatpak app ID.
+- `branch`: branch published inside the bundle. It must match the actual branch in the `.flatpak`.
+- `title`: display name.
+- `description`: short app description.
+- `homepage`: project page.
+- `icon-url`: public icon URL.
+- `source.type`: currently the supported value is `github-release-asset`.
+- `source.repository`: GitHub repository in `owner/repo` format.
+- `source.release`: `latest` or a specific tag.
+- `source.asset`: asset name, with glob support, as long as it resolves to a single `.flatpak`.
 
-## Repository variables
+## What Slophub publishes
 
-Required:
+For each configured app, the repository publishes:
 
-- `SLOPHUB_APP_ID`  
-  Example: `io.github.youruser.YourApp`
-- `SLOPHUB_MANIFEST_PATH`  
-  Example: `manifests/io.github.youruser.YourApp.yml`
-- `SLOPHUB_GPG_KEY_ID`  
-  Example: `ABCDEF0123456789`
+- `repo/` containing the app in the remote
+- `<APP_ID>.flatpakref`
+- `apps.json` with metadata for the published apps
 
-Optional:
-
-- `SLOPHUB_BRANCH`  
-  Default: `stable`
-- `SLOPHUB_COLLECTION_ID`  
-  Example: `io.github.youruser.Slophub`
-- `SLOPHUB_REMOTE_NAME`  
-  Default: `slophub`
-- `SLOPHUB_REPO_TITLE`  
-  Default: `Slophub`
-- `SLOPHUB_REPO_COMMENT`
-- `SLOPHUB_REPO_DESCRIPTION`
-- `SLOPHUB_REPO_HOMEPAGE`
-- `SLOPHUB_REPO_URL`
-- `SLOPHUB_RUNTIME_REPO`  
-  Default: `https://dl.flathub.org/repo/flathub.flatpakrepo`
-- `SLOPHUB_ICON_URL`
-- `SLOPHUB_DESCRIPTION`
-
-## Required secrets
-
-- `SLOPHUB_GPG_PRIVATE_KEY`  
-  ASCII-armored private key used to sign the repository.
-- `SLOPHUB_GPG_PASSPHRASE`  
-  Passphrase for the private key.
-
-## Generating the GPG key
-
-Local example:
-
-```bash
-gpg --full-generate-key
-gpg --list-secret-keys --keyid-format=long
-gpg --armor --export-secret-keys ABCDEF0123456789
-```
-
-Use the output of the last command as the value of `SLOPHUB_GPG_PRIVATE_KEY`.
-
-## Published output
-
-After deployment, GitHub Pages will publish:
-
-- `https://<owner>.github.io/<repo>/slophub.flatpakrepo`
-- `https://<owner>.github.io/<repo>/<APP_ID>.flatpakref`
-- `https://<owner>.github.io/<repo>/repo/`
-
-## Repository installation
+## How users install apps
 
 ```bash
 flatpak remote-add --if-not-exists slophub https://<owner>.github.io/<repo>/repo/
-```
-
-## App installation
-
-```bash
 flatpak install slophub <APP_ID>
 ```
 
-## Notes
+## JSON catalog
 
-- The validation workflow uses `--stop-at=modules` to catch manifest errors early without publishing anything.
-- Deployment uses the `ghcr.io/flathub-infra/flatpak-github-actions:gnome-48` image, which already includes a suitable Flatpak toolchain for CI.
-- The app manifest is not included here because it depends on the package you want to distribute.
+The public catalog is available at:
+
+```text
+https://<owner>.github.io/<repo>/apps.json
+```
+
+It includes:
+
+- remote metadata
+- published app list
+- `.flatpakref` URL for each app
+- upstream release metadata
+- imported bundle URL and `sha256`
+
+## Updates
+
+`Slophub` checks for new releases periodically. When the upstream `.flatpak` changes, the remote is updated and users receive the new version through `flatpak update`.

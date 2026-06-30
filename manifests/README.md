@@ -1,7 +1,9 @@
-Place the Flatpak manifest for the application published by the `Slophub` repository here.
+Place the package manifests published by the `Slophub` repository here.
+
+Each `*.json` file defines one app imported into the Slophub Flatpak remote.
 
 Expected path example:
 
-- `manifests/io.github.youruser.YourApp.yml`
+- `manifests/dev.parquetta.Parquetta.json`
 
-Then set the `SLOPHUB_MANIFEST_PATH` variable to that path.
+The current format supports GitHub release assets that publish `.flatpak` bundles.

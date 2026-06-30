@@ -1,10 +1,11 @@
-name: Validate Flatpak Manifest
+name: Validate Slophub Packages
 
 on:
   pull_request:
     paths:
       - ".github/workflows/validate-manifest.yml"
       - "manifests/**"
+      - "scripts/**"
   workflow_dispatch:
 
 jobs:
@@ -18,23 +19,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate manifest
-        env:
-          SLOPHUB_MANIFEST_PATH: ${{ vars.SLOPHUB_MANIFEST_PATH }}
+      - name: Resolve package manifests
         run: |
           set -euo pipefail
 
-          manifest_path="${SLOPHUB_MANIFEST_PATH:-manifests/app.yml}"
-          if [ ! -f "${manifest_path}" ]; then
-            echo "Manifest not found: ${manifest_path}" >&2
-            exit 1
-          fi
+          python3 scripts/slophub.py resolve --output build/packages.json
 
-          mkdir -p build-test
-          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak-builder \
-            --stop-at=modules \
-            --force-clean \
-            --install-deps-from=flathub \
-            build-test \
-            "${manifest_path}"
+      - name: Import bundles into test repository
+        run: |
+          set -euo pipefail
+
+          mkdir -p build-test/downloads build-test/repo
+          python3 scripts/slophub.py import-bundles \
+            --input build/packages.json \
+            --download-dir build-test/downloads \
+            --repo-dir build-test/repo

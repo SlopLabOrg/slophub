@@ -1,0 +1,14 @@
+{
+  "app-id": "dev.parquetta.Parquetta",
+  "branch": "master",
+  "title": "Parquetta",
+  "description": "Preview and query Parquet files with DuckDB.",
+  "homepage": "https://github.com/ogregorio/parquetta",
+  "icon-url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/Parquetta.svg",
+  "source": {
+    "type": "github-release-asset",
+    "repository": "ogregorio/parquetta",
+    "release": "latest",
+    "asset": "parquetta-*.flatpak"
+  }
+}

@@ -8,6 +8,8 @@ on:
       - ".github/workflows/build-and-publish.yml"
       - "manifests/**"
       - "scripts/**"
+  schedule:
+    - cron: "17 5 * * *"
   workflow_dispatch:
 
 permissions:
@@ -32,8 +34,6 @@ jobs:
 
       - name: Validate configuration
         env:
-          SLOPHUB_APP_ID: ${{ vars.SLOPHUB_APP_ID }}
-          SLOPHUB_MANIFEST_PATH: ${{ vars.SLOPHUB_MANIFEST_PATH }}
           SLOPHUB_GPG_KEY_ID: ${{ vars.SLOPHUB_GPG_KEY_ID }}
           SLOPHUB_GPG_PRIVATE_KEY: ${{ secrets.SLOPHUB_GPG_PRIVATE_KEY }}
           SLOPHUB_GPG_PASSPHRASE: ${{ secrets.SLOPHUB_GPG_PASSPHRASE }}
@@ -41,8 +41,6 @@ jobs:
           set -euo pipefail
 
           required=(
-            SLOPHUB_APP_ID
-            SLOPHUB_MANIFEST_PATH
             SLOPHUB_GPG_KEY_ID
             SLOPHUB_GPG_PRIVATE_KEY
             SLOPHUB_GPG_PASSPHRASE
@@ -54,11 +52,7 @@ jobs:
               exit 1
             fi
           done
-
-          if [ ! -f "${SLOPHUB_MANIFEST_PATH}" ]; then
-            echo "Manifest not found: ${SLOPHUB_MANIFEST_PATH}" >&2
-            exit 1
-          fi
+          python3 scripts/slophub.py resolve --output build/packages.json
 
       - name: Import signing key
         env:
@@ -93,35 +87,24 @@ jobs:
 
       - name: Build Flatpak repository
         env:
-          SLOPHUB_APP_ID: ${{ vars.SLOPHUB_APP_ID }}
-          SLOPHUB_MANIFEST_PATH: ${{ vars.SLOPHUB_MANIFEST_PATH }}
           SLOPHUB_BRANCH: ${{ vars.SLOPHUB_BRANCH }}
           SLOPHUB_COLLECTION_ID: ${{ vars.SLOPHUB_COLLECTION_ID }}
           SLOPHUB_GPG_KEY_ID: ${{ vars.SLOPHUB_GPG_KEY_ID }}
         run: |
           set -euo pipefail
 
-          mkdir -p build repo public
-          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-
-          branch_flag=()
+          mkdir -p build repo public downloads
           collection_flag=()
-          if [ -n "${SLOPHUB_BRANCH:-}" ]; then
-            branch_flag+=(--default-branch="${SLOPHUB_BRANCH}")
-          fi
           if [ -n "${SLOPHUB_COLLECTION_ID:-}" ]; then
             collection_flag+=(--collection-id="${SLOPHUB_COLLECTION_ID}")
           fi
 
-          flatpak-builder \
-            --force-clean \
-            --repo=repo \
-            --gpg-sign="${SLOPHUB_GPG_KEY_ID}" \
-            --install-deps-from=flathub \
-            "${branch_flag[@]}" \
-            "${collection_flag[@]}" \
-            build \
-            "${SLOPHUB_MANIFEST_PATH}"
+          python3 scripts/slophub.py resolve --output build/packages.json
+          python3 scripts/slophub.py import-bundles \
+            --input build/packages.json \
+            --download-dir downloads \
+            --repo-dir repo \
+            --gpg-sign "${SLOPHUB_GPG_KEY_ID}"
 
           flatpak build-update-repo \
             repo \
@@ -132,24 +115,22 @@ jobs:
 
       - name: Render repository metadata
         env:
-          SLOPHUB_APP_ID: ${{ vars.SLOPHUB_APP_ID }}
           SLOPHUB_BRANCH: ${{ vars.SLOPHUB_BRANCH }}
           SLOPHUB_COLLECTION_ID: ${{ vars.SLOPHUB_COLLECTION_ID }}
-          SLOPHUB_DESCRIPTION: ${{ vars.SLOPHUB_DESCRIPTION }}
           SLOPHUB_ICON_URL: ${{ vars.SLOPHUB_ICON_URL }}
-          SLOPHUB_REMOTE_NAME: ${{ vars.SLOPHUB_REMOTE_NAME }}
+          SLOPHUB_REMOTE_NAME: ${{ vars.SLOPHUB_REMOTE_NAME || 'slophub' }}
           SLOPHUB_REPO_COMMENT: ${{ vars.SLOPHUB_REPO_COMMENT }}
           SLOPHUB_REPO_DESCRIPTION: ${{ vars.SLOPHUB_REPO_DESCRIPTION }}
           SLOPHUB_REPO_HOMEPAGE: ${{ vars.SLOPHUB_REPO_HOMEPAGE }}
-          SLOPHUB_REPO_TITLE: ${{ vars.SLOPHUB_REPO_TITLE }}
-          SLOPHUB_RUNTIME_REPO: ${{ vars.SLOPHUB_RUNTIME_REPO }}
+          SLOPHUB_REPO_TITLE: ${{ vars.SLOPHUB_REPO_TITLE || 'Slophub' }}
+          SLOPHUB_RUNTIME_REPO: ${{ vars.SLOPHUB_RUNTIME_REPO || 'https://dl.flathub.org/repo/flathub.flatpakrepo' }}
           SLOPHUB_GPG_KEY_ID: ${{ vars.SLOPHUB_GPG_KEY_ID }}
         run: |
           set -euo pipefail
 
           gpg --batch --yes --output public/slophub-signing-key.gpg --export "${SLOPHUB_GPG_KEY_ID}"
           export SLOPHUB_GPG_KEY_BASE64="$(base64 -w0 public/slophub-signing-key.gpg)"
-          ./scripts/render-flatpak-metadata.sh
+          python3 scripts/slophub.py render-metadata --input build/packages.json --public-dir public
           cp -R repo/. public/repo/
 
       - name: Upload build artifact
