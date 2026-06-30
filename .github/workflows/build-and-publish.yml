@@ -110,6 +110,7 @@ jobs:
             repo \
             --gpg-sign="${SLOPHUB_GPG_KEY_ID}" \
             --generate-static-deltas \
+            --no-update-appstream \
             --prune \
             "${collection_flag[@]}"
 

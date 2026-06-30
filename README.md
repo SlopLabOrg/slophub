@@ -50,8 +50,10 @@ Example:
 For each configured app, the repository publishes:
 
 - `repo/` containing the app in the remote
+- `slophub.flatpakrepo`
 - `<APP_ID>.flatpakref`
 - `apps.json` with metadata for the published apps
+- AppStream metadata intended for software centers such as GNOME Software
 
 ## How users install apps
 
@@ -59,6 +61,22 @@ For each configured app, the repository publishes:
 flatpak remote-add --if-not-exists slophub https://<owner>.github.io/<repo>/repo/
 flatpak install slophub <APP_ID>
 ```
+
+## GNOME Software
+
+To add the remote in GNOME Software, open:
+
+```text
+https://<owner>.github.io/<repo>/slophub.flatpakrepo
+```
+
+To install a specific app directly in GNOME Software, open:
+
+```text
+https://<owner>.github.io/<repo>/<APP_ID>.flatpakref
+```
+
+`Slophub` also publishes AppStream metadata for the imported apps so software centers can index them more reliably.
 
 ## JSON catalog
 

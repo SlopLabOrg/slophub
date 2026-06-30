@@ -5,12 +5,15 @@ from __future__ import annotations
 import argparse
 from datetime import UTC, datetime
 import fnmatch
+import gzip
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -130,6 +133,10 @@ def run(command: list[str]) -> None:
     subprocess.run(command, check=True)
 
 
+def capture(command: list[str]) -> str:
+    return subprocess.check_output(command, text=True)
+
+
 def download_file(url: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(url, headers={"User-Agent": "slophub"})
@@ -147,6 +154,192 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def ensure_png_icon(source_path: Path, destination_path: Path, size: int) -> None:
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    magick = shutil.which("magick")
+    if magick:
+        command = [magick, str(source_path)]
+    else:
+        command = ["convert", str(source_path)]
+    command.extend(["-background", "none", "-resize", f"{size}x{size}", str(destination_path)])
+    run(command)
+
+
+def find_imported_ref(repo_dir: Path, app_id: str, branch: str) -> str:
+    refs = capture(["ostree", "refs", f"--repo={repo_dir}"]).splitlines()
+    suffix = f"/{branch}"
+    prefix = f"app/{app_id}/"
+    matches = [ref for ref in refs if ref.startswith(prefix) and ref.endswith(suffix)]
+    if not matches:
+        raise ValueError(f"could not find imported ref for {app_id} branch {branch}")
+    if len(matches) > 1:
+        raise ValueError(f"multiple refs found for {app_id} branch {branch}: {', '.join(matches)}")
+    return matches[0]
+
+
+def repo_cat(repo_dir: Path, ref: str, path: str) -> bytes:
+    return subprocess.check_output(["ostree", "cat", f"--repo={repo_dir}", ref, path])
+
+
+def repo_has_path(repo_dir: Path, ref: str, path: str) -> bool:
+    result = subprocess.run(
+        ["ostree", "ls", f"--repo={repo_dir}", ref, path],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def first_existing_path(repo_dir: Path, ref: str, candidates: list[str]) -> str:
+    for candidate in candidates:
+        if repo_has_path(repo_dir, ref, candidate):
+            return candidate
+    raise ValueError(f"none of the candidate paths exist for {ref}: {', '.join(candidates)}")
+
+
+def build_component_xml(
+    repo_dir: Path,
+    ref: str,
+    package: dict[str, Any],
+    icons_root: Path,
+) -> ET.Element:
+    metainfo_path = first_existing_path(
+        repo_dir,
+        ref,
+        [
+            f"/files/share/metainfo/{package['app_id']}.metainfo.xml",
+            f"/export/share/metainfo/{package['app_id']}.metainfo.xml",
+        ],
+    )
+    component = ET.fromstring(repo_cat(repo_dir, ref, metainfo_path))
+
+    icon_candidates = [
+        f"/files/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
+        f"/files/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
+        f"/export/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
+        f"/export/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
+    ]
+    icon_path = first_existing_path(repo_dir, ref, icon_candidates)
+    icon_source_path = icons_root / Path(icon_path).name
+    icon_source_path.parent.mkdir(parents=True, exist_ok=True)
+    icon_source_path.write_bytes(repo_cat(repo_dir, ref, icon_path))
+
+    for size in (64, 128):
+        ensure_png_icon(
+            icon_source_path,
+            icons_root / str(size) / f"{package['app_id']}.png",
+            size,
+        )
+
+    for existing_icon in list(component.findall("icon")):
+        if existing_icon.attrib.get("type") == "cached":
+            component.remove(existing_icon)
+
+    cached_64 = ET.Element("icon", {"type": "cached", "width": "64", "height": "64"})
+    cached_64.text = f"{package['app_id']}.png"
+    cached_128 = ET.Element("icon", {"type": "cached", "width": "128", "height": "128"})
+    cached_128.text = f"{package['app_id']}.png"
+    component.insert(0, cached_128)
+    component.insert(0, cached_64)
+
+    if not any(icon.attrib.get("type") == "stock" for icon in component.findall("icon")):
+        stock = ET.Element("icon", {"type": "stock"})
+        stock.text = package["app_id"]
+        component.insert(0, stock)
+
+    return component
+
+
+def write_appstream_catalog(path: Path, components: list[ET.Element]) -> None:
+    root = ET.Element("components", {"version": "0.8", "origin": "flatpak"})
+    for component in components:
+        root.append(component)
+    tree = ET.ElementTree(root)
+    ET.indent(tree, space="  ")
+    tree.write(path, encoding="utf-8", xml_declaration=True)
+
+
+def commit_directory_to_repo(
+    repo_dir: Path,
+    branch: str,
+    source_dir: Path,
+    subject: str,
+    gpg_sign: str | None,
+) -> None:
+    command = [
+        "ostree",
+        "commit",
+        f"--repo={repo_dir}",
+        f"--branch={branch}",
+        "--tree",
+        f"dir={source_dir}",
+        "--subject",
+        subject,
+    ]
+    if gpg_sign:
+        command.extend(["--gpg-sign", gpg_sign])
+    run(command)
+
+
+def generate_appstream(repo_dir: Path, packages: list[dict[str, Any]], gpg_sign: str | None) -> None:
+    refs_by_arch: dict[str, list[tuple[dict[str, Any], str]]] = {}
+    for package in packages:
+        ref = find_imported_ref(repo_dir, package["app_id"], package["branch"])
+        parts = ref.split("/")
+        if len(parts) != 4:
+            raise ValueError(f"unexpected ref format: {ref}")
+        arch = parts[2]
+        refs_by_arch.setdefault(arch, []).append((package, ref))
+
+    temp_root = repo_dir.parent / ".slophub-appstream"
+    if temp_root.exists():
+        subprocess.run(["rm", "-rf", str(temp_root)], check=True)
+    temp_root.mkdir(parents=True, exist_ok=True)
+
+    for arch, entries in refs_by_arch.items():
+        icons_source_root = temp_root / arch / "icon-sources"
+        icons_cache_root = temp_root / arch / "icons"
+        components = []
+        for package, ref in entries:
+            components.append(build_component_xml(repo_dir, ref, package, icons_source_root))
+
+        appstream2_root = temp_root / arch / "appstream2"
+        appstream_root = temp_root / arch / "appstream"
+        (appstream2_root / "icons").mkdir(parents=True, exist_ok=True)
+        (appstream_root / "icons").mkdir(parents=True, exist_ok=True)
+
+        write_appstream_catalog(appstream2_root / "appstream.xml", components)
+        xml_bytes = (appstream2_root / "appstream.xml").read_bytes()
+        with gzip.open(appstream_root / "appstream.xml.gz", "wb") as handle:
+            handle.write(xml_bytes)
+
+        for size in (64, 128):
+            source_size_dir = icons_source_root / str(size)
+            if source_size_dir.exists():
+                for target_root in (appstream2_root, appstream_root):
+                    target_dir = target_root / "icons" / f"{size}x{size}"
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    for icon_path in source_size_dir.glob("*.png"):
+                        destination = target_dir / icon_path.name
+                        destination.write_bytes(icon_path.read_bytes())
+
+        commit_directory_to_repo(
+            repo_dir,
+            f"appstream2/{arch}",
+            appstream2_root,
+            f"Update appstream2 for {arch}",
+            gpg_sign,
+        )
+        commit_directory_to_repo(
+            repo_dir,
+            f"appstream/{arch}",
+            appstream_root,
+            f"Update appstream for {arch}",
+            gpg_sign,
+        )
 
 
 def command_resolve(args: argparse.Namespace) -> int:
@@ -188,6 +381,7 @@ def command_import(args: argparse.Namespace) -> int:
             command.append(f"--gpg-sign={args.gpg_sign}")
         run(command)
 
+    generate_appstream(repo_dir, packages, args.gpg_sign)
     return 0
 
 
