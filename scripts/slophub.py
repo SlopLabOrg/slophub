@@ -110,6 +110,7 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         "description": manifest.get("description", ""),
         "icon_url": icon_url,
         "homepage": manifest.get("homepage", ""),
+        "screenshots": manifest.get("screenshots", []),
         "source": resolved_source,
     }
 
@@ -268,6 +269,32 @@ def build_component_xml(
         stock = ET.Element("icon", {"type": "stock"})
         stock.text = package["app_id"]
         component.insert(0, stock)
+
+    if package["icon_url"] and not any(icon.attrib.get("type") == "remote" for icon in component.findall("icon")):
+        remote_icon = ET.Element("icon", {"type": "remote"})
+        remote_icon.text = package["icon_url"]
+        component.insert(0, remote_icon)
+
+    if package["screenshots"]:
+        screenshots_node = component.find("screenshots")
+        if screenshots_node is None:
+            screenshots_node = ET.SubElement(component, "screenshots")
+
+        existing_sources = {
+            image.text or ""
+            for screenshot in screenshots_node.findall("screenshot")
+            for image in screenshot.findall("image")
+        }
+
+        is_first = len(screenshots_node.findall("screenshot")) == 0
+        for screenshot_url in package["screenshots"]:
+            if screenshot_url in existing_sources:
+                continue
+            attrs = {"type": "default"} if is_first else {}
+            screenshot = ET.SubElement(screenshots_node, "screenshot", attrs)
+            image = ET.SubElement(screenshot, "image", {"type": "source"})
+            image.text = screenshot_url
+            is_first = False
 
     return component
 
