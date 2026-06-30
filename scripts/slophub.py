@@ -9,7 +9,6 @@ import gzip
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import urllib.request
@@ -158,13 +157,33 @@ def sha256_file(path: Path) -> str:
 
 def ensure_png_icon(source_path: Path, destination_path: Path, size: int) -> None:
     destination_path.parent.mkdir(parents=True, exist_ok=True)
-    magick = shutil.which("magick")
-    if magick:
-        command = [magick, str(source_path)]
-    else:
-        command = ["convert", str(source_path)]
-    command.extend(["-background", "none", "-resize", f"{size}x{size}", str(destination_path)])
-    run(command)
+    suffix = source_path.suffix.lower()
+    if suffix == ".png":
+        from PIL import Image
+
+        with Image.open(source_path) as image:
+            image = image.convert("RGBA")
+            image.thumbnail((size, size))
+            image.save(destination_path, format="PNG")
+        return
+
+    if suffix == ".svg":
+        try:
+            import cairosvg
+        except ImportError as exc:
+            raise RuntimeError(
+                "cairosvg is required to rasterize SVG icons for AppStream metadata"
+            ) from exc
+
+        cairosvg.svg2png(
+            url=str(source_path),
+            write_to=str(destination_path),
+            output_width=size,
+            output_height=size,
+        )
+        return
+
+    raise ValueError(f"unsupported icon format for AppStream rasterization: {source_path}")
 
 
 def find_imported_ref(repo_dir: Path, app_id: str, branch: str) -> str:

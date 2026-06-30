@@ -19,6 +19,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Python dependencies
+        run: |
+          set -euo pipefail
+
+          python3 -m pip install --disable-pip-version-check cairosvg
+
       - name: Resolve package manifests
         run: |
           set -euo pipefail
