@@ -24,7 +24,10 @@ Example:
   "homepage": "https://github.com/ogregorio/parquetta",
   "icon-url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/Parquetta.svg",
   "screenshots": [
-    "https://raw.githubusercontent.com/ogregorio/parquetta/main/assets/Screenshot.png"
+    {
+      "url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/assets/Screenshot.png",
+      "caption": "Parquetta previewing a Parquet file"
+    }
   ],
   "source": {
     "type": "github-release-asset",
@@ -43,7 +46,7 @@ Example:
 - `description`: short app description.
 - `homepage`: project page.
 - `icon-url`: public icon URL.
-- `screenshots`: optional list of public screenshot URLs to inject into AppStream metadata.
+- `screenshots`: optional list of screenshot objects with `url` and optional `caption` to inject into AppStream metadata.
 - `source.type`: currently the supported value is `github-release-asset`.
 - `source.repository`: GitHub repository in `owner/repo` format.
 - `source.release`: `latest` or a specific tag.

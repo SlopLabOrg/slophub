@@ -102,6 +102,20 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
     resolved_source = resolve_github_release_asset(manifest_path, source)
     icon_url = manifest.get("icon-url") or ""
 
+    screenshots = []
+    for entry in manifest.get("screenshots", []):
+        if isinstance(entry, str):
+            screenshots.append({"url": entry, "caption": manifest.get("title", manifest["app-id"])})
+        elif isinstance(entry, dict) and entry.get("url"):
+            screenshots.append(
+                {
+                    "url": entry["url"],
+                    "caption": entry.get("caption", manifest.get("title", manifest["app-id"])),
+                }
+            )
+        else:
+            raise ValueError(f"{manifest_path}: invalid screenshot entry {entry!r}")
+
     return {
         "manifest_path": str(manifest_path),
         "app_id": manifest["app-id"],
@@ -110,7 +124,7 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         "description": manifest.get("description", ""),
         "icon_url": icon_url,
         "homepage": manifest.get("homepage", ""),
-        "screenshots": manifest.get("screenshots", []),
+        "screenshots": screenshots,
         "source": resolved_source,
     }
 
@@ -270,11 +284,6 @@ def build_component_xml(
         stock.text = package["app_id"]
         component.insert(0, stock)
 
-    if package["icon_url"] and not any(icon.attrib.get("type") == "remote" for icon in component.findall("icon")):
-        remote_icon = ET.Element("icon", {"type": "remote"})
-        remote_icon.text = package["icon_url"]
-        component.insert(0, remote_icon)
-
     if package["screenshots"]:
         screenshots_node = component.find("screenshots")
         if screenshots_node is None:
@@ -287,13 +296,16 @@ def build_component_xml(
         }
 
         is_first = len(screenshots_node.findall("screenshot")) == 0
-        for screenshot_url in package["screenshots"]:
+        for screenshot_data in package["screenshots"]:
+            screenshot_url = screenshot_data["url"]
             if screenshot_url in existing_sources:
                 continue
             attrs = {"type": "default"} if is_first else {}
             screenshot = ET.SubElement(screenshots_node, "screenshot", attrs)
             image = ET.SubElement(screenshot, "image", {"type": "source"})
             image.text = screenshot_url
+            caption = ET.SubElement(screenshot, "caption")
+            caption.text = screenshot_data["caption"]
             is_first = False
 
     return component
