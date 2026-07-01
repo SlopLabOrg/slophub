@@ -471,16 +471,25 @@ def env_default(name: str, fallback: str = "") -> str:
     return value
 
 
-def repo_urls() -> tuple[str, str]:
+def publication_urls() -> tuple[str, str, str]:
     repository = os.environ.get("GITHUB_REPOSITORY", "")
     if "/" in repository:
         owner, repo = repository.split("/", 1)
-        base = f"https://{owner}.github.io/{repo}/"
+        default_repo_web = f"https://github.com/{owner}/{repo}"
+        default_site = f"https://{owner}.github.io/{repo}/"
     else:
-        base = "https://example.invalid/"
-    homepage = env_default("SLOPHUB_REPO_HOMEPAGE", base)
-    repo_url = env_default("SLOPHUB_REPO_URL", f"{base}repo/")
-    return homepage, repo_url
+        default_repo_web = "https://example.invalid/repository"
+        default_site = "https://example.invalid/"
+    repository_url = env_default("SLOPHUB_REPOSITORY_WEB_URL", default_repo_web)
+    homepage_url = env_default("SLOPHUB_REPO_HOMEPAGE", default_site)
+    flatpak_repo_url = env_default("SLOPHUB_REPO_URL", f"{default_site}repo/")
+    return repository_url, homepage_url, flatpak_repo_url
+
+
+def flatpak_base_url(flatpak_repo_url: str) -> str:
+    if flatpak_repo_url.endswith("/repo/"):
+        return flatpak_repo_url.removesuffix("/repo/")
+    return flatpak_repo_url.rstrip("/")
 
 
 def maybe_line(name: str, value: str) -> str:
@@ -500,14 +509,14 @@ def render_flatpakrepo(public_dir: Path, packages: list[dict[str, Any]]) -> None
     collection_id = env_default("SLOPHUB_COLLECTION_ID")
     default_branch = env_default("SLOPHUB_BRANCH", packages[0]["branch"] if packages else "stable")
     gpg_key_base64 = os.environ["SLOPHUB_GPG_KEY_BASE64"]
-    homepage, repo_url = repo_urls()
+    _, homepage_url, flatpak_repo_url = publication_urls()
     icon_url = env_default("SLOPHUB_ICON_URL", packages[0]["icon_url"] if packages else "")
 
     content = [
         "[Flatpak Repo]\n",
         f"Title={repo_title}\n",
-        f"Url={repo_url}\n",
-        f"Homepage={homepage}\n",
+        f"Url={flatpak_repo_url}\n",
+        f"Homepage={homepage_url}\n",
         f"Comment={repo_comment}\n",
         f"Description={repo_description}\n",
         maybe_line("Icon", icon_url),
@@ -524,7 +533,7 @@ def render_flatpakrefs(public_dir: Path, packages: list[dict[str, Any]]) -> None
         "SLOPHUB_RUNTIME_REPO", "https://dl.flathub.org/repo/flathub.flatpakrepo"
     )
     gpg_key_base64 = os.environ["SLOPHUB_GPG_KEY_BASE64"]
-    _, repo_url = repo_urls()
+    _, _, flatpak_repo_url = publication_urls()
 
     for package in packages:
         content = [
@@ -532,7 +541,7 @@ def render_flatpakrefs(public_dir: Path, packages: list[dict[str, Any]]) -> None
             f"Name={package['app_id']}\n",
             f"Branch={package['branch']}\n",
             f"Title={package['title']}\n",
-            f"Url={repo_url}\n",
+            f"Url={flatpak_repo_url}\n",
             "IsRuntime=false\n",
             f"RuntimeRepo={runtime_repo}\n",
             f"SuggestRemoteName={remote_name}\n",
@@ -550,16 +559,18 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
         "SLOPHUB_REPO_DESCRIPTION",
         "Flatpak remote that republishes selected upstream Flatpak bundles.",
     )
-    homepage, repo_url = repo_urls()
+    repository_url, homepage_url, flatpak_repo_url = publication_urls()
+    flatpak_public_base = flatpak_base_url(flatpak_repo_url)
 
     catalog = {
         "remote": {
             "name": remote_name,
             "title": repo_title,
             "description": repo_description,
-            "homepage_url": homepage,
-            "repo_url": repo_url,
-            "flatpakrepo_url": f"{homepage}{remote_name}.flatpakrepo",
+            "homepage_url": homepage_url,
+            "repo_url": repository_url,
+            "flatpak_repo_url": flatpak_repo_url,
+            "flatpakrepo_url": f"{flatpak_public_base}/{remote_name}.flatpakrepo",
         },
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "apps": [],
@@ -574,7 +585,7 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
                 "description": package["description"],
                 "homepage_url": package["homepage"],
                 "icon_url": package["icon_url"],
-                "flatpakref_url": f"{homepage}{package['app_id']}.flatpakref",
+                "flatpakref_url": f"{flatpak_public_base}/{package['app_id']}.flatpakref",
                 "release": {
                     "name": package["source"]["release_name"],
                     "tag": package["source"]["release_tag"],
