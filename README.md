@@ -65,7 +65,7 @@ For each configured app, the repository publishes:
 ## How users install apps
 
 ```bash
-flatpak remote-add --if-not-exists slophub https://ai-slophub.github.io/slophub/repo/
+flatpak remote-add --if-not-exists slophub https://dl.sloplab.org/repo/
 flatpak install slophub <APP_ID>
 ```
 
@@ -74,13 +74,13 @@ flatpak install slophub <APP_ID>
 To add the remote in GNOME Software, open:
 
 ```text
-https://ai-slophub.github.io/slophub/slophub.flatpakrepo
+https://dl.sloplab.org/slophub.flatpakrepo
 ```
 
 To install a specific app directly in GNOME Software, open:
 
 ```text
-https://ai-slophub.github.io/slophub/<APP_ID>.flatpakref
+https://dl.sloplab.org/<APP_ID>.flatpakref
 ```
 
 `Slophub` also publishes AppStream metadata for the imported apps so software centers can index them more reliably.
@@ -90,7 +90,7 @@ https://ai-slophub.github.io/slophub/<APP_ID>.flatpakref
 The public catalog is available at:
 
 ```text
-https://ai-slophub.github.io/slophub/apps.json
+https://dl.sloplab.org/apps.json
 ```
 
 It includes:
