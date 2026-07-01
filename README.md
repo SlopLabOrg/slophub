@@ -1,10 +1,10 @@
 # Slophub
 
-This repository is used to make Flatpak apps available through the `Slophub` remote.
+Slophub republishes Flatpak apps through the `slophub` remote.
 
-If you want your app to be available here, the requirement is simple: your project must publish a `.flatpak` file in a GitHub release.
+If you want your app to be available here, your project must publish a `.flatpak` file in a GitHub release.
 
-## How to add your app
+## Add an app
 
 1. Create a `manifests/<APP_ID>.json` file.
 2. Point that file to your project's GitHub release.
@@ -52,9 +52,7 @@ Example:
 - `source.release`: `latest` or a specific tag.
 - `source.asset`: asset name, with glob support, as long as it resolves to a single `.flatpak`.
 
-## What Slophub publishes
-
-For each configured app, the repository publishes:
+For each configured app, Slophub publishes:
 
 - `repo/` containing the app in the remote
 - `slophub.flatpakrepo`
@@ -62,11 +60,10 @@ For each configured app, the repository publishes:
 - `apps.json` with metadata for the published apps
 - AppStream metadata intended for software centers such as GNOME Software
 
-## How users install apps
+## Add the Slophub remote
 
 ```bash
 flatpak remote-add --if-not-exists slophub https://dl.sloplab.org/repo/
-flatpak install slophub <APP_ID>
 ```
 
 ## GNOME Software
@@ -75,6 +72,12 @@ To add the remote in GNOME Software, open:
 
 ```text
 https://dl.sloplab.org/slophub.flatpakrepo
+```
+
+## Install an app
+
+```bash
+flatpak install slophub <APP_ID>
 ```
 
 To install a specific app directly in GNOME Software, open:
@@ -100,16 +103,6 @@ It includes:
 - `.flatpakref` URL for each app
 - upstream release metadata
 - imported bundle URL and `sha256`
-
-## Repository metadata variables
-
-The published remote metadata can be customized through repository variables:
-
-- `SLOPHUB_REMOTE_NAME`: remote name in the catalog and `.flatpakref` suggestions
-- `SLOPHUB_REPOSITORY_WEB_URL`: source repository URL shown as `repo_url`
-- `SLOPHUB_REPO_HOMEPAGE`: homepage shown as `homepage_url`
-- `SLOPHUB_REPO_URL`: Flatpak repository URL shown as `flatpak_repo_url`
-- `SLOPHUB_FLATPAKREPO_URL`: public `.flatpakrepo` URL shown as `flatpakrepo_url`
 
 ## Updates
 
