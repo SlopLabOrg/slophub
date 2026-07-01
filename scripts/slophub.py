@@ -495,6 +495,10 @@ def maybe_line(name: str, value: str) -> str:
     return f"{name}={value}\n"
 
 
+def public_artifact_base_url(flatpakrepo_url: str) -> str:
+    return flatpakrepo_url.rsplit("/", 1)[0]
+
+
 def render_flatpakrepo(public_dir: Path, packages: list[dict[str, Any]]) -> None:
     remote_name = env_default("SLOPHUB_REMOTE_NAME", "slophub")
     repo_title = env_default("SLOPHUB_REPO_TITLE", "Slophub")
@@ -557,6 +561,7 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
         "Flatpak remote that republishes selected upstream Flatpak bundles.",
     )
     repository_url, homepage_url, flatpak_repo_url, flatpakrepo_url = publication_urls(remote_name)
+    public_base_url = public_artifact_base_url(flatpakrepo_url)
 
     catalog = {
         "remote": {
@@ -581,7 +586,7 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
                 "description": package["description"],
                 "homepage_url": package["homepage"],
                 "icon_url": package["icon_url"],
-                "flatpakref_url": f"{flatpak_public_base}/{package['app_id']}.flatpakref",
+                "flatpakref_url": f"{public_base_url}/{package['app_id']}.flatpakref",
                 "release": {
                     "name": package["source"]["release_name"],
                     "tag": package["source"]["release_tag"],
