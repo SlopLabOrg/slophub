@@ -101,6 +101,16 @@ It includes:
 - upstream release metadata
 - imported bundle URL and `sha256`
 
+## Repository metadata variables
+
+The published remote metadata can be customized through repository variables:
+
+- `SLOPHUB_REMOTE_NAME`: remote name in the catalog and `.flatpakref` suggestions
+- `SLOPHUB_REPOSITORY_WEB_URL`: source repository URL shown as `repo_url`
+- `SLOPHUB_REPO_HOMEPAGE`: homepage shown as `homepage_url`
+- `SLOPHUB_REPO_URL`: Flatpak repository URL shown as `flatpak_repo_url`
+- `SLOPHUB_FLATPAKREPO_URL`: public `.flatpakrepo` URL shown as `flatpakrepo_url`
+
 ## Updates
 
 `Slophub` checks for new releases periodically. When the upstream `.flatpak` changes, the remote is updated and users receive the new version through `flatpak update`.
