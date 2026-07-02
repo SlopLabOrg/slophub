@@ -48,8 +48,8 @@ Example:
 - `description`: short app description.
 - `categories`: optional list of app categories. These values are also published in `apps.json` and merged into the generated AppStream metadata.
 - `homepage`: project page.
-- `icon-path`: path to the upstream icon file inside the source repository. Slophub fetches this file from the resolved release tag and uses it for AppStream icons and the catalog icon URL.
-- `metainfo-path`: path to the upstream AppStream metainfo file inside the source repository. Slophub fetches this file from the resolved release tag when generating AppStream metadata.
+- `icon-path`: required path to the upstream icon file inside the source repository. Slophub fetches this file from the resolved release tag and uses it for AppStream icons and the catalog icon URL.
+- `metainfo-path`: required path to the upstream AppStream metainfo file inside the source repository. Slophub fetches this file from the resolved release tag when generating AppStream metadata.
 - `icon-url`: optional public icon URL override for the catalog.
 - `screenshots`: optional list of screenshot objects with `url` and optional `caption` to inject into AppStream metadata.
 - `source.type`: currently the supported value is `github-release-asset`.

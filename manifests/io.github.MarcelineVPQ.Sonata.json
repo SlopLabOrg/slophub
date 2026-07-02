@@ -1,0 +1,25 @@
+{
+  "app-id": "io.github.MarcelineVPQ.Sonata",
+  "branch": "master",
+  "title": "Sonata",
+  "description": "Desktop player for the Apple Music web app.",
+  "categories": [
+    "Audio",
+    "AudioVideo"
+  ],
+  "homepage": "https://github.com/MarcelineVPQ/apple-music-for-linux",
+  "icon-path": "sonata.png",
+  "metainfo-path": "io.github.MarcelineVPQ.Sonata.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/MarcelineVPQ/apple-music-for-linux/master/screenshots/lyrics-mini-player.png",
+      "caption": "The mini player and time-synced lyrics window"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "MarcelineVPQ/apple-music-for-linux",
+    "release": "latest",
+    "asset": "sonata-*-x86_64.flatpak"
+  }
+}

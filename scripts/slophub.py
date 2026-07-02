@@ -19,13 +19,14 @@ from pathlib import Path
 from typing import Any
 
 SUPPORTED_CATEGORIES = (
-    "Applets",
-    "Multimedia",
+    "Audio",
+    "AudioVideo",
     "Database",
     "Development",
     "Education",
     "Game",
     "Graphics",
+    "IDE",
     "Network",
     "Office",
     "Science",
@@ -33,6 +34,7 @@ SUPPORTED_CATEGORIES = (
     "Spreadsheet",
     "System",
     "Utility",
+    "Video",
 )
 
 
@@ -44,7 +46,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         data = json.load(handle)
 
-    required = ["app-id", "source"]
+    required = ["app-id", "icon-path", "metainfo-path", "source"]
     for key in required:
         if key not in data:
             raise ValueError(f"{path}: missing required field {key!r}")
@@ -165,10 +167,8 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         raise ValueError(f"{manifest_path}: unsupported source type {source_type!r}")
 
     resolved_source = resolve_github_release_asset(manifest_path, source)
-    icon_path = manifest.get("icon-path") or ""
-    icon_url = manifest.get("icon-url") or (
-        source_file_url(resolved_source, icon_path) if icon_path else ""
-    )
+    icon_path = manifest["icon-path"]
+    icon_url = manifest.get("icon-url") or source_file_url(resolved_source, icon_path)
 
     screenshots = []
     for entry in manifest.get("screenshots", []):
@@ -198,7 +198,7 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         "icon_path": icon_path,
         "icon_url": icon_url,
         "homepage": manifest.get("homepage", ""),
-        "metainfo_path": manifest.get("metainfo-path", ""),
+        "metainfo_path": manifest["metainfo-path"],
         "screenshots": screenshots,
         "source": resolved_source,
     }
@@ -327,39 +327,16 @@ def build_component_xml(
     package: dict[str, Any],
     icons_root: Path,
 ) -> ET.Element:
-    if package["metainfo_path"]:
-        component = ET.fromstring(
-            download_bytes(source_file_url(package["source"], package["metainfo_path"]))
-        )
-    else:
-        metainfo_path = first_existing_path(
-            repo_dir,
-            ref,
-            [
-                f"/files/share/metainfo/{package['app_id']}.metainfo.xml",
-                f"/export/share/metainfo/{package['app_id']}.metainfo.xml",
-            ],
-        )
-        component = ET.fromstring(repo_cat(repo_dir, ref, metainfo_path))
+    component = ET.fromstring(
+        download_bytes(source_file_url(package["source"], package["metainfo_path"]))
+    )
     metadata = parse_flatpak_metadata(repo_dir, ref)
 
-    if package["icon_path"]:
-        icon_source_path = icons_root / Path(package["icon_path"]).name
-        icon_source_path.parent.mkdir(parents=True, exist_ok=True)
-        icon_source_path.write_bytes(
-            download_bytes(source_file_url(package["source"], package["icon_path"]))
-        )
-    else:
-        icon_candidates = [
-            f"/files/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
-            f"/files/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
-            f"/export/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
-            f"/export/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
-        ]
-        icon_path = first_existing_path(repo_dir, ref, icon_candidates)
-        icon_source_path = icons_root / Path(icon_path).name
-        icon_source_path.parent.mkdir(parents=True, exist_ok=True)
-        icon_source_path.write_bytes(repo_cat(repo_dir, ref, icon_path))
+    icon_source_path = icons_root / Path(package["icon_path"]).name
+    icon_source_path.parent.mkdir(parents=True, exist_ok=True)
+    icon_source_path.write_bytes(
+        download_bytes(source_file_url(package["source"], package["icon_path"]))
+    )
 
     for size in (64, 128):
         ensure_png_icon(
