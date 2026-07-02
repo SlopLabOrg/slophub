@@ -486,7 +486,7 @@ def build_component_xml(
     if package["categories"]:
         categories_node = component.find("categories")
         if categories_node is None:
-            categories_node = ET.SubElement(component, "categories")
+            categories_node = StdET.SubElement(component, "categories")
 
         existing_categories = {
             category.text or ""
@@ -496,14 +496,14 @@ def build_component_xml(
         for category_name in package["categories"]:
             if category_name in existing_categories:
                 continue
-            category = ET.SubElement(categories_node, "category")
+            category = StdET.SubElement(categories_node, "category")
             category.text = category_name
             existing_categories.add(category_name)
 
     if package["screenshots"]:
         screenshots_node = component.find("screenshots")
         if screenshots_node is None:
-            screenshots_node = ET.SubElement(component, "screenshots")
+            screenshots_node = StdET.SubElement(component, "screenshots")
 
         existing_sources = {
             image.text or ""
@@ -517,10 +517,10 @@ def build_component_xml(
             if screenshot_url in existing_sources:
                 continue
             attrs = {"type": "default"} if is_first else {}
-            screenshot = ET.SubElement(screenshots_node, "screenshot", attrs)
-            image = ET.SubElement(screenshot, "image", {"type": "source"})
+            screenshot = StdET.SubElement(screenshots_node, "screenshot", attrs)
+            image = StdET.SubElement(screenshot, "image", {"type": "source"})
             image.text = screenshot_url
-            caption = ET.SubElement(screenshot, "caption")
+            caption = StdET.SubElement(screenshot, "caption")
             caption.text = screenshot_data["caption"]
             is_first = False
 
