@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
-      options: --privileged
 
     steps:
       - name: Checkout
@@ -23,20 +22,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          python3 -m pip install --disable-pip-version-check cairosvg
+          python3 -m pip install --disable-pip-version-check cairosvg defusedxml
 
       - name: Resolve package manifests
         run: |
           set -euo pipefail
 
           python3 scripts/slophub.py resolve --output build/packages.json
-
-      - name: Import bundles into test repository
-        run: |
-          set -euo pipefail
-
-          mkdir -p build-test/downloads build-test/repo
-          python3 scripts/slophub.py import-bundles \
-            --input build/packages.json \
-            --download-dir build-test/downloads \
-            --repo-dir build-test/repo

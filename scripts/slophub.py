@@ -9,14 +9,16 @@ import gzip
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from defusedxml import ElementTree as ET
 
 SUPPORTED_CATEGORIES = (
     "Audio",
@@ -36,6 +38,36 @@ SUPPORTED_CATEGORIES = (
     "Utility",
     "Video",
 )
+
+SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+SAFE_APP_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+DEFAULT_HTTP_TIMEOUT = float(os.environ.get("SLOPHUB_HTTP_TIMEOUT", "30"))
+MAX_BUNDLE_BYTES = int(os.environ.get("SLOPHUB_MAX_BUNDLE_BYTES", str(2 * 1024**3)))
+MAX_ICON_BYTES = int(os.environ.get("SLOPHUB_MAX_ICON_BYTES", str(10 * 1024**2)))
+MAX_METAINFO_BYTES = int(
+    os.environ.get("SLOPHUB_MAX_METAINFO_BYTES", str(2 * 1024**2))
+)
+
+
+def require_non_empty_string(path: Path, field: str, value: Any) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{path}: field {field!r} must be a non-empty string")
+    if any(ch in value for ch in ("\r", "\n", "\0")):
+        raise ValueError(f"{path}: field {field!r} contains forbidden control characters")
+    return value
+
+
+def validate_https_url(path: Path, field: str, value: str) -> str:
+    parsed = urllib.parse.urlparse(value)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError(f"{path}: field {field!r} must be an https URL")
+    return value
+
+
+def validate_safe_name(path: Path, field: str, value: str, pattern: re.Pattern[str]) -> str:
+    if not pattern.fullmatch(value):
+        raise ValueError(f"{path}: field {field!r} contains unsupported characters")
+    return value
 
 
 def list_manifest_paths(manifests_dir: Path) -> list[Path]:
@@ -70,9 +102,42 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if "applet" in data and not isinstance(data["applet"], bool):
         raise ValueError(f"{path}: field 'applet' must be a boolean")
 
-    for key in ("icon-path", "metainfo-path", "icon-url"):
-        if key in data and (not isinstance(data[key], str) or not data[key]):
-            raise ValueError(f"{path}: field {key!r} must be a non-empty string")
+    data["app-id"] = validate_safe_name(
+        path,
+        "app-id",
+        require_non_empty_string(path, "app-id", data["app-id"]),
+        SAFE_APP_ID_RE,
+    )
+
+    for key in ("icon-path", "metainfo-path"):
+        data[key] = require_non_empty_string(path, key, data[key])
+
+    for optional_key in ("branch", "title", "description", "homepage", "icon-url"):
+        if optional_key in data:
+            data[optional_key] = require_non_empty_string(path, optional_key, data[optional_key])
+
+    if "branch" in data:
+        validate_safe_name(path, "branch", data["branch"], SAFE_NAME_RE)
+
+    if "homepage" in data:
+        validate_https_url(path, "homepage", data["homepage"])
+
+    if "icon-url" in data:
+        validate_https_url(path, "icon-url", data["icon-url"])
+
+    screenshots = data.get("screenshots", [])
+    if not isinstance(screenshots, list):
+        raise ValueError(f"{path}: field 'screenshots' must be a list")
+    for index, entry in enumerate(screenshots):
+        if isinstance(entry, str):
+            validate_https_url(path, f"screenshots[{index}]", entry)
+            continue
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: invalid screenshot entry {entry!r}")
+        url = require_non_empty_string(path, f"screenshots[{index}].url", entry.get("url"))
+        validate_https_url(path, f"screenshots[{index}].url", url)
+        if "caption" in entry:
+            require_non_empty_string(path, f"screenshots[{index}].caption", entry["caption"])
 
     return data
 
@@ -85,7 +150,7 @@ def github_api_json(url: str) -> dict[str, Any]:
             "User-Agent": "slophub",
         },
     )
-    with urllib.request.urlopen(request) as response:
+    with urllib.request.urlopen(request, timeout=DEFAULT_HTTP_TIMEOUT) as response:
         return json.load(response)
 
 
@@ -155,10 +220,23 @@ def source_file_url(source: dict[str, Any], relative_path: str) -> str:
     return f"https://raw.githubusercontent.com/{repository}/{ref}/{quoted_path}"
 
 
-def download_bytes(url: str) -> bytes:
+def download_bytes(url: str, max_bytes: int) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": "slophub"})
-    with urllib.request.urlopen(request) as response:
-        return response.read()
+    with urllib.request.urlopen(request, timeout=DEFAULT_HTTP_TIMEOUT) as response:
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > max_bytes:
+            raise ValueError(f"download too large from {url}: {content_length} bytes")
+        chunks = []
+        total = 0
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_bytes:
+                raise ValueError(f"download too large from {url}: exceeded {max_bytes} bytes")
+            chunks.append(chunk)
+        return b"".join(chunks)
 
 
 def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
@@ -233,11 +311,18 @@ def capture(command: list[str]) -> str:
 def download_file(url: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(url, headers={"User-Agent": "slophub"})
-    with urllib.request.urlopen(request) as response, destination.open("wb") as handle:
+    with urllib.request.urlopen(request, timeout=DEFAULT_HTTP_TIMEOUT) as response, destination.open("wb") as handle:
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_BUNDLE_BYTES:
+            raise ValueError(f"bundle too large from {url}: {content_length} bytes")
+        total = 0
         while True:
             chunk = response.read(1024 * 1024)
             if not chunk:
                 break
+            total += len(chunk)
+            if total > MAX_BUNDLE_BYTES:
+                raise ValueError(f"bundle too large from {url}: exceeded {MAX_BUNDLE_BYTES} bytes")
             handle.write(chunk)
 
 
@@ -332,14 +417,20 @@ def build_component_xml(
     icons_root: Path,
 ) -> ET.Element:
     component = ET.fromstring(
-        download_bytes(source_file_url(package["source"], package["metainfo_path"]))
+        download_bytes(
+            source_file_url(package["source"], package["metainfo_path"]),
+            MAX_METAINFO_BYTES,
+        )
     )
     metadata = parse_flatpak_metadata(repo_dir, ref)
 
     icon_source_path = icons_root / Path(package["icon_path"]).name
     icon_source_path.parent.mkdir(parents=True, exist_ok=True)
     icon_source_path.write_bytes(
-        download_bytes(source_file_url(package["source"], package["icon_path"]))
+        download_bytes(
+            source_file_url(package["source"], package["icon_path"]),
+            MAX_ICON_BYTES,
+        )
     )
 
     for size in (64, 128):
@@ -588,6 +679,8 @@ def publication_urls(remote_name: str) -> tuple[str, str, str, str]:
 def maybe_line(name: str, value: str) -> str:
     if not value:
         return ""
+    if any(ch in value for ch in ("\r", "\n", "\0")):
+        raise ValueError(f"{name} contains forbidden control characters")
     return f"{name}={value}\n"
 
 
@@ -597,6 +690,8 @@ def public_artifact_base_url(flatpakrepo_url: str) -> str:
 
 def render_flatpakrepo(public_dir: Path, packages: list[dict[str, Any]]) -> None:
     remote_name = env_default("SLOPHUB_REMOTE_NAME", "slophub")
+    if not SAFE_NAME_RE.fullmatch(remote_name):
+        raise ValueError("SLOPHUB_REMOTE_NAME contains unsupported characters")
     repo_title = env_default("SLOPHUB_REPO_TITLE", "Slophub")
     repo_comment = env_default(
         "SLOPHUB_REPO_COMMENT", "Flatpak remote published by Slophub."
@@ -614,6 +709,10 @@ def render_flatpakrepo(public_dir: Path, packages: list[dict[str, Any]]) -> None
     icon_url = env_default(
         "SLOPHUB_ICON_URL", packages[0]["icon_url"] if packages else ""
     )
+    validate_https_url(Path("<env>"), "SLOPHUB_REPO_HOMEPAGE", homepage_url)
+    validate_https_url(Path("<env>"), "SLOPHUB_REPO_URL", flatpak_repo_url)
+    if icon_url:
+        validate_https_url(Path("<env>"), "SLOPHUB_ICON_URL", icon_url)
 
     content = [
         "[Flatpak Repo]\n",
@@ -634,11 +733,15 @@ def render_flatpakrepo(public_dir: Path, packages: list[dict[str, Any]]) -> None
 
 def render_flatpakrefs(public_dir: Path, packages: list[dict[str, Any]]) -> None:
     remote_name = env_default("SLOPHUB_REMOTE_NAME", "slophub")
+    if not SAFE_NAME_RE.fullmatch(remote_name):
+        raise ValueError("SLOPHUB_REMOTE_NAME contains unsupported characters")
     runtime_repo = env_default(
         "SLOPHUB_RUNTIME_REPO", "https://dl.flathub.org/repo/flathub.flatpakrepo"
     )
     gpg_key_base64 = os.environ["SLOPHUB_GPG_KEY_BASE64"]
     _, _, flatpak_repo_url, _ = publication_urls(remote_name)
+    validate_https_url(Path("<env>"), "SLOPHUB_RUNTIME_REPO", runtime_repo)
+    validate_https_url(Path("<env>"), "SLOPHUB_REPO_URL", flatpak_repo_url)
 
     for package in packages:
         content = [

@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          python3 -m pip install --disable-pip-version-check cairosvg
+          python3 -m pip install --disable-pip-version-check cairosvg defusedxml
 
       - name: Validate configuration
         env:
