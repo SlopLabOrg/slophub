@@ -1,0 +1,25 @@
+{
+  "app-id": "io.github.andresgarcia0313.ThermalMonitor",
+  "branch": "master",
+  "title": "Thermal Monitor",
+  "description": "Monitor and control CPU thermal management on Linux laptops.",
+  "categories": [
+    "System",
+    "Settings"
+  ],
+  "homepage": "https://github.com/andresgarcia0313/thermalmonitor",
+  "icon-path": "thermal-monitor-gui/flatpak/io.github.andresgarcia0313.ThermalMonitor.svg",
+  "metainfo-path": "thermal-monitor-gui/flatpak/io.github.andresgarcia0313.ThermalMonitor.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/andresgarcia0313/thermalmonitor/v1.3.5/thermal-monitor-gui/screenshots/main.png",
+      "caption": "Main window showing temperatures and controls"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "andresgarcia0313/thermalmonitor",
+    "release": "latest",
+    "asset": "thermal-monitor.flatpak"
+  }
+}
