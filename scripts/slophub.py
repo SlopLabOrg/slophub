@@ -67,6 +67,9 @@ def load_manifest(path: Path) -> dict[str, Any]:
         names = ", ".join(unsupported_categories)
         raise ValueError(f"{path}: unsupported categories: {names}")
 
+    if "applet" in data and not isinstance(data["applet"], bool):
+        raise ValueError(f"{path}: field 'applet' must be a boolean")
+
     for key in ("icon-path", "metainfo-path", "icon-url"):
         if key in data and (not isinstance(data[key], str) or not data[key]):
             raise ValueError(f"{path}: field {key!r} must be a non-empty string")
@@ -195,6 +198,7 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         "title": manifest.get("title", manifest["app-id"]),
         "description": manifest.get("description", ""),
         "categories": manifest.get("categories", []),
+        "applet": manifest.get("applet", False),
         "icon_path": icon_path,
         "icon_url": icon_url,
         "homepage": manifest.get("homepage", ""),
@@ -689,6 +693,7 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
                 "title": package["title"],
                 "description": package["description"],
                 "categories": package["categories"],
+                "applet": package["applet"],
                 "homepage_url": package["homepage"],
                 "icon_url": package["icon_url"],
                 "screenshots": package["screenshots"],

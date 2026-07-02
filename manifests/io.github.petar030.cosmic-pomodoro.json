@@ -1,0 +1,29 @@
+{
+  "app-id": "io.github.petar030.cosmic-pomodoro",
+  "branch": "master",
+  "title": "Cosmic Pomodoro",
+  "description": "Minimal Pomodoro applet for the COSMIC desktop.",
+  "categories": [
+    "Utility"
+  ],
+  "applet": true,
+  "homepage": "https://github.com/petar030/cosmic-pomodoro",
+  "icon-path": "resources/icon.svg",
+  "metainfo-path": "resources/app.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/petar030/cosmic-pomodoro/master/img/Main.png",
+      "caption": "Main applet window with timer controls."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/petar030/cosmic-pomodoro/master/img/Config.png",
+      "caption": "Settings view with configurable Pomodoro intervals."
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "petar030/cosmic-pomodoro",
+    "release": "latest",
+    "asset": "io.github.petar030.cosmic-pomodoro-*.flatpak"
+  }
+}
