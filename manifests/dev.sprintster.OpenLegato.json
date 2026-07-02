@@ -1,0 +1,33 @@
+{
+  "app-id": "dev.sprintster.OpenLegato",
+  "branch": "master",
+  "title": "Open Legato",
+  "description": "Sheet-music reader for musicians with fullscreen performance mode.",
+  "categories": [
+    "AudioVideo",
+    "Audio"
+  ],
+  "homepage": "https://github.com/ggyorfi/open-legato",
+  "icon-path": "src-tauri/icons/128x128@2x.png",
+  "metainfo-path": "flatpak/dev.sprintster.OpenLegato.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/ggyorfi/open-legato/v1.0.4/flatpak/screenshots/1.png",
+      "caption": "Dual-page performance mode"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ggyorfi/open-legato/v1.0.4/flatpak/screenshots/2.png",
+      "caption": "Settings popup"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ggyorfi/open-legato/v1.0.4/flatpak/screenshots/3.png",
+      "caption": "Editing a repeat button"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "ggyorfi/open-legato",
+    "release": "latest",
+    "asset": "open-legato.flatpak"
+  }
+}
