@@ -1,0 +1,32 @@
+{
+  "app-id": "io.github.soyeb_jim285.HyprFM",
+  "branch": "stable",
+  "title": "HyprFM",
+  "description": "Lightweight Qt6/QML file manager built for Wayland and Hyprland.",
+  "categories": [
+    "System"
+  ],
+  "homepage": "https://github.com/soyeb-jim285/hyprfm",
+  "icon-path": "dist/io.github.soyeb_jim285.HyprFM.svg",
+  "metainfo-path": "dist/io.github.soyeb_jim285.HyprFM.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/soyeb-jim285/hyprfm/v0.4.26/docs/screenshots/grid-view.png",
+      "caption": "Grid view with file preview"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/soyeb-jim285/hyprfm/v0.4.26/docs/screenshots/miller-view.png",
+      "caption": "Miller column view"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/soyeb-jim285/hyprfm/v0.4.26/docs/screenshots/quick-preview.png",
+      "caption": "Quick preview overlay"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "soyeb-jim285/hyprfm",
+    "release": "latest",
+    "asset": "HyprFM-v*-x86_64.flatpak"
+  }
+}
