@@ -1,0 +1,28 @@
+{
+  "app-id": "io.github.dyslechtchitect.tfcbm",
+  "branch": "stable",
+  "title": "TFCBM",
+  "description": "Clipboard manager for Linux.",
+  "categories": [
+    "Utility"
+  ],
+  "homepage": "https://github.com/dyslechtchitect/tfcbm",
+  "icon-path": "icons/hicolor/scalable/apps/io.github.dyslechtchitect.tfcbm.svg",
+  "metainfo-path": "io.github.dyslechtchitect.tfcbm.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/dyslechtchitect/tfcbm/v1.1.5/screenshots/general.png",
+      "caption": "Main window showing clipboard history"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/dyslechtchitect/tfcbm/v1.1.5/screenshots/search.png",
+      "caption": "Search through clipboard history"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "dyslechtchitect/tfcbm",
+    "release": "latest",
+    "asset": "tfcbm-x86_64.flatpak"
+  }
+}
