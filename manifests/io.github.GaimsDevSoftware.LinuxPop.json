@@ -1,0 +1,29 @@
+{
+  "app-id": "io.github.GaimsDevSoftware.LinuxPop",
+  "branch": "stable",
+  "title": "LinuxPop",
+  "description": "Context-aware popup actions for selected text on Linux.",
+  "categories": [
+    "Utility",
+    "Office"
+  ],
+  "homepage": "https://github.com/GaimsDevSoftware/linuxpop",
+  "icon-path": "icons/linuxpop.svg",
+  "metainfo-path": "packaging/io.github.GaimsDevSoftware.LinuxPop.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/GaimsDevSoftware/linuxpop/v0.9.7/docs/screenshots/popup.png",
+      "caption": "The action popup near a text selection"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/GaimsDevSoftware/linuxpop/v0.9.7/docs/screenshots/settings.png",
+      "caption": "Settings with the premium dark theme"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "GaimsDevSoftware/linuxpop",
+    "release": "latest",
+    "asset": "io.github.GaimsDevSoftware.LinuxPop.flatpak"
+  }
+}
