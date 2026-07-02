@@ -1,0 +1,32 @@
+{
+  "app-id": "io.github.StockMonitorCH.stock-monitor",
+  "branch": "master",
+  "title": "Stock Monitor",
+  "description": "Desktop portfolio manager for stocks, ETFs, crypto and commodities.",
+  "categories": [
+    "Office"
+  ],
+  "homepage": "https://www.stock-monitor.ch",
+  "icon-path": "stock-monitor-256.png",
+  "metainfo-path": "io.github.StockMonitorCH.stock-monitor.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/StockMonitorCH/stock-monitor/v5.4.3/screenshots/dashboard_EN.png",
+      "caption": "Main dashboard with live charts"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/StockMonitorCH/stock-monitor/v5.4.3/screenshots/portfolio_EN.png",
+      "caption": "Portfolio overview"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/StockMonitorCH/stock-monitor/v5.4.3/screenshots/ai-balance_EN.png",
+      "caption": "AI Balance analysis"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "StockMonitorCH/stock-monitor",
+    "release": "latest",
+    "asset": "StockMonitor-*.flatpak"
+  }
+}
