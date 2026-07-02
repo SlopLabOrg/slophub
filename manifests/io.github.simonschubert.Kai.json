@@ -1,0 +1,25 @@
+{
+  "app-id": "io.github.simonschubert.Kai",
+  "branch": "master",
+  "title": "Kai 9000",
+  "description": "AI assistant desktop app with support for local and hosted models.",
+  "categories": [
+    "Utility",
+    "Network"
+  ],
+  "homepage": "https://github.com/SimonSchubert/Kai",
+  "icon-path": "composeApp/icon.svg",
+  "metainfo-path": "flatpak/io.github.simonschubert.Kai.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/SimonSchubert/Kai/v2.8.0/screenshots/desktop-1.png",
+      "caption": "Main chat interface"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "SimonSchubert/Kai",
+    "release": "latest",
+    "asset": "Kai-*-linux.flatpak"
+  }
+}
