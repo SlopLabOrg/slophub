@@ -122,7 +122,6 @@ jobs:
           flatpak build-update-repo \
             repo \
             --gpg-sign="${SLOPHUB_GPG_KEY_ID}" \
-            --generate-static-deltas \
             --no-update-appstream \
             --prune \
             "${collection_flag[@]}"
@@ -149,6 +148,14 @@ jobs:
           export SLOPHUB_GPG_KEY_BASE64="$(base64 -w0 public/slophub-signing-key.gpg)"
           python3 scripts/slophub.py render-metadata --input build/packages.json --public-dir public
           cp -R repo/. public/repo/
+
+      - name: Check publish size
+        run: |
+          set -euo pipefail
+
+          du -sh public
+          du -sh public/* | sort -rh
+          du -sh public/repo/* | sort -rh | head -30
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
