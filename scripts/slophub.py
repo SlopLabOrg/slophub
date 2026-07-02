@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import configparser
-from datetime import UTC, datetime
 import fnmatch
 import gzip
 import hashlib
@@ -14,8 +13,26 @@ import subprocess
 import sys
 import urllib.request
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+SUPPORTED_CATEGORIES = (
+    "Applets",
+    "Multimedia",
+    "Database",
+    "Development",
+    "Education",
+    "Game",
+    "Graphics",
+    "Network",
+    "Office",
+    "Science",
+    "Settings",
+    "Spreadsheet",
+    "System",
+    "Utility",
+)
 
 
 def list_manifest_paths(manifests_dir: Path) -> list[Path]:
@@ -34,6 +51,19 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if not isinstance(data["source"], dict):
         raise ValueError(f"{path}: field 'source' must be an object")
 
+    categories = data.get("categories", [])
+    if not isinstance(categories, list) or any(
+        not isinstance(entry, str) or not entry for entry in categories
+    ):
+        raise ValueError(
+            f"{path}: field 'categories' must be a list of non-empty strings"
+        )
+
+    unsupported_categories = sorted(set(categories) - set(SUPPORTED_CATEGORIES))
+    if unsupported_categories:
+        names = ", ".join(unsupported_categories)
+        raise ValueError(f"{path}: unsupported categories: {names}")
+
     return data
 
 
@@ -49,7 +79,9 @@ def github_api_json(url: str) -> dict[str, Any]:
         return json.load(response)
 
 
-def resolve_github_release_asset(manifest_path: Path, source: dict[str, Any]) -> dict[str, Any]:
+def resolve_github_release_asset(
+    manifest_path: Path, source: dict[str, Any]
+) -> dict[str, Any]:
     repository = source.get("repository")
     asset_pattern = source.get("asset")
     release = source.get("release", "latest")
@@ -66,19 +98,33 @@ def resolve_github_release_asset(manifest_path: Path, source: dict[str, Any]) ->
 
     payload = github_api_json(api_url)
     assets = payload.get("assets", [])
-    matches = [asset for asset in assets if fnmatch.fnmatch(asset.get("name", ""), asset_pattern)]
+    matches = [
+        asset
+        for asset in assets
+        if fnmatch.fnmatch(asset.get("name", ""), asset_pattern)
+    ]
 
     if not matches:
-        raise ValueError(f"{manifest_path}: no release asset matched pattern {asset_pattern!r}")
+        raise ValueError(
+            f"{manifest_path}: no release asset matched pattern {asset_pattern!r}"
+        )
     if len(matches) > 1:
         names = ", ".join(asset["name"] for asset in matches)
-        raise ValueError(f"{manifest_path}: asset pattern {asset_pattern!r} matched multiple assets: {names}")
+        raise ValueError(
+            f"{manifest_path}: asset pattern {asset_pattern!r} matched multiple assets: {names}"
+        )
 
     asset = matches[0]
     digest = asset.get("digest", "")
-    sha256 = digest.split(":", 1)[1] if digest.startswith("sha256:") else source.get("sha256")
+    sha256 = (
+        digest.split(":", 1)[1]
+        if digest.startswith("sha256:")
+        else source.get("sha256")
+    )
     if not sha256:
-        raise ValueError(f"{manifest_path}: could not determine sha256 for asset {asset['name']}")
+        raise ValueError(
+            f"{manifest_path}: could not determine sha256 for asset {asset['name']}"
+        )
 
     return {
         "asset_name": asset["name"],
@@ -106,12 +152,16 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
     screenshots = []
     for entry in manifest.get("screenshots", []):
         if isinstance(entry, str):
-            screenshots.append({"url": entry, "caption": manifest.get("title", manifest["app-id"])})
+            screenshots.append(
+                {"url": entry, "caption": manifest.get("title", manifest["app-id"])}
+            )
         elif isinstance(entry, dict) and entry.get("url"):
             screenshots.append(
                 {
                     "url": entry["url"],
-                    "caption": entry.get("caption", manifest.get("title", manifest["app-id"])),
+                    "caption": entry.get(
+                        "caption", manifest.get("title", manifest["app-id"])
+                    ),
                 }
             )
         else:
@@ -123,6 +173,7 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         "branch": manifest.get("branch", "stable"),
         "title": manifest.get("title", manifest["app-id"]),
         "description": manifest.get("description", ""),
+        "categories": manifest.get("categories", []),
         "icon_url": icon_url,
         "homepage": manifest.get("homepage", ""),
         "screenshots": screenshots,
@@ -199,7 +250,9 @@ def ensure_png_icon(source_path: Path, destination_path: Path, size: int) -> Non
         )
         return
 
-    raise ValueError(f"unsupported icon format for AppStream rasterization: {source_path}")
+    raise ValueError(
+        f"unsupported icon format for AppStream rasterization: {source_path}"
+    )
 
 
 def find_imported_ref(repo_dir: Path, app_id: str, branch: str) -> str:
@@ -210,7 +263,9 @@ def find_imported_ref(repo_dir: Path, app_id: str, branch: str) -> str:
     if not matches:
         raise ValueError(f"could not find imported ref for {app_id} branch {branch}")
     if len(matches) > 1:
-        raise ValueError(f"multiple refs found for {app_id} branch {branch}: {', '.join(matches)}")
+        raise ValueError(
+            f"multiple refs found for {app_id} branch {branch}: {', '.join(matches)}"
+        )
     return matches[0]
 
 
@@ -232,7 +287,9 @@ def first_existing_path(repo_dir: Path, ref: str, candidates: list[str]) -> str:
     for candidate in candidates:
         if repo_has_path(repo_dir, ref, candidate):
             return candidate
-    raise ValueError(f"none of the candidate paths exist for {ref}: {', '.join(candidates)}")
+    raise ValueError(
+        f"none of the candidate paths exist for {ref}: {', '.join(candidates)}"
+    )
 
 
 def parse_flatpak_metadata(repo_dir: Path, ref: str) -> configparser.ConfigParser:
@@ -287,7 +344,9 @@ def build_component_xml(
     component.insert(0, cached_128)
     component.insert(0, cached_64)
 
-    if not any(icon.attrib.get("type") == "stock" for icon in component.findall("icon")):
+    if not any(
+        icon.attrib.get("type") == "stock" for icon in component.findall("icon")
+    ):
         stock = ET.Element("icon", {"type": "stock"})
         stock.text = package["app_id"]
         component.insert(0, stock)
@@ -304,6 +363,23 @@ def build_component_xml(
         bundle = ET.Element("bundle", bundle_attrs)
         bundle.text = ref
         component.append(bundle)
+
+    if package["categories"]:
+        categories_node = component.find("categories")
+        if categories_node is None:
+            categories_node = ET.SubElement(component, "categories")
+
+        existing_categories = {
+            category.text or ""
+            for category in categories_node.findall("category")
+            if category.text
+        }
+        for category_name in package["categories"]:
+            if category_name in existing_categories:
+                continue
+            category = ET.SubElement(categories_node, "category")
+            category.text = category_name
+            existing_categories.add(category_name)
 
     if package["screenshots"]:
         screenshots_node = component.find("screenshots")
@@ -363,7 +439,9 @@ def commit_directory_to_repo(
     run(command)
 
 
-def generate_appstream(repo_dir: Path, packages: list[dict[str, Any]], gpg_sign: str | None) -> None:
+def generate_appstream(
+    repo_dir: Path, packages: list[dict[str, Any]], gpg_sign: str | None
+) -> None:
     refs_by_arch: dict[str, list[tuple[dict[str, Any], str]]] = {}
     for package in packages:
         ref = find_imported_ref(repo_dir, package["app_id"], package["branch"])
@@ -383,7 +461,9 @@ def generate_appstream(repo_dir: Path, packages: list[dict[str, Any]], gpg_sign:
         icons_cache_root = temp_root / arch / "icons"
         components = []
         for package, ref in entries:
-            components.append(build_component_xml(repo_dir, ref, package, icons_source_root))
+            components.append(
+                build_component_xml(repo_dir, ref, package, icons_source_root)
+            )
 
         appstream2_root = temp_root / arch / "appstream2"
         appstream_root = temp_root / arch / "appstream"
@@ -502,16 +582,22 @@ def public_artifact_base_url(flatpakrepo_url: str) -> str:
 def render_flatpakrepo(public_dir: Path, packages: list[dict[str, Any]]) -> None:
     remote_name = env_default("SLOPHUB_REMOTE_NAME", "slophub")
     repo_title = env_default("SLOPHUB_REPO_TITLE", "Slophub")
-    repo_comment = env_default("SLOPHUB_REPO_COMMENT", "Flatpak remote published by Slophub.")
+    repo_comment = env_default(
+        "SLOPHUB_REPO_COMMENT", "Flatpak remote published by Slophub."
+    )
     repo_description = env_default(
         "SLOPHUB_REPO_DESCRIPTION",
         "Flatpak remote that republishes selected upstream Flatpak bundles.",
     )
     collection_id = env_default("SLOPHUB_COLLECTION_ID")
-    default_branch = env_default("SLOPHUB_BRANCH", packages[0]["branch"] if packages else "stable")
+    default_branch = env_default(
+        "SLOPHUB_BRANCH", packages[0]["branch"] if packages else "stable"
+    )
     gpg_key_base64 = os.environ["SLOPHUB_GPG_KEY_BASE64"]
     _, homepage_url, flatpak_repo_url, _ = publication_urls(remote_name)
-    icon_url = env_default("SLOPHUB_ICON_URL", packages[0]["icon_url"] if packages else "")
+    icon_url = env_default(
+        "SLOPHUB_ICON_URL", packages[0]["icon_url"] if packages else ""
+    )
 
     content = [
         "[Flatpak Repo]\n",
@@ -525,7 +611,9 @@ def render_flatpakrepo(public_dir: Path, packages: list[dict[str, Any]]) -> None
         f"GPGKey={gpg_key_base64}\n",
         maybe_line("DeployCollectionID", collection_id),
     ]
-    (public_dir / f"{remote_name}.flatpakrepo").write_text("".join(content), encoding="utf-8")
+    (public_dir / f"{remote_name}.flatpakrepo").write_text(
+        "".join(content), encoding="utf-8"
+    )
 
 
 def render_flatpakrefs(public_dir: Path, packages: list[dict[str, Any]]) -> None:
@@ -550,7 +638,9 @@ def render_flatpakrefs(public_dir: Path, packages: list[dict[str, Any]]) -> None
             maybe_line("Icon", package["icon_url"]),
             f"GPGKey={gpg_key_base64}\n",
         ]
-        (public_dir / f"{package['app_id']}.flatpakref").write_text("".join(content), encoding="utf-8")
+        (public_dir / f"{package['app_id']}.flatpakref").write_text(
+            "".join(content), encoding="utf-8"
+        )
 
 
 def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
@@ -560,7 +650,9 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
         "SLOPHUB_REPO_DESCRIPTION",
         "Flatpak remote that republishes selected upstream Flatpak bundles.",
     )
-    repository_url, homepage_url, flatpak_repo_url, flatpakrepo_url = publication_urls(remote_name)
+    repository_url, homepage_url, flatpak_repo_url, flatpakrepo_url = publication_urls(
+        remote_name
+    )
     public_base_url = public_artifact_base_url(flatpakrepo_url)
 
     catalog = {
@@ -584,6 +676,7 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
                 "branch": package["branch"],
                 "title": package["title"],
                 "description": package["description"],
+                "categories": package["categories"],
                 "homepage_url": package["homepage"],
                 "icon_url": package["icon_url"],
                 "flatpakref_url": f"{public_base_url}/{package['app_id']}.flatpakref",

@@ -21,6 +21,7 @@ Example:
   "branch": "master",
   "title": "Parquetta",
   "description": "Preview and query Parquet files with DuckDB.",
+  "categories": ["Development", "Database"],
   "homepage": "https://github.com/ogregorio/parquetta",
   "icon-url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/Parquetta.svg",
   "screenshots": [
@@ -44,6 +45,7 @@ Example:
 - `branch`: branch published inside the bundle. It must match the actual branch in the `.flatpak`.
 - `title`: display name.
 - `description`: short app description.
+- `categories`: optional list of app categories. These values are also published in `apps.json` and merged into the generated AppStream metadata.
 - `homepage`: project page.
 - `icon-url`: public icon URL.
 - `screenshots`: optional list of screenshot objects with `url` and optional `caption` to inject into AppStream metadata.
@@ -51,6 +53,27 @@ Example:
 - `source.repository`: GitHub repository in `owner/repo` format.
 - `source.release`: `latest` or a specific tag.
 - `source.asset`: asset name, with glob support, as long as it resolves to a single `.flatpak`.
+
+## Categories
+
+Use `categories` as a JSON array with one or more of these values:
+
+- `Audio`
+- `AudioVideo`
+- `Database`
+- `Development`
+- `Education`
+- `Game`
+- `Graphics`
+- `IDE`
+- `Network`
+- `Office`
+- `Science`
+- `Settings`
+- `Spreadsheet`
+- `System`
+- `Utility`
+- `Video`
 
 For each configured app, Slophub publishes:
 
@@ -100,6 +123,7 @@ It includes:
 
 - remote metadata
 - published app list
+- app categories
 - `.flatpakref` URL for each app
 - upstream release metadata
 - imported bundle URL and `sha256`

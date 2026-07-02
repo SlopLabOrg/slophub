@@ -3,6 +3,10 @@
   "branch": "master",
   "title": "Parquetta",
   "description": "Preview and query Parquet files with DuckDB.",
+  "categories": [
+    "Development",
+    "Database"
+  ],
   "homepage": "https://github.com/ogregorio/parquetta",
   "icon-url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/Parquetta.svg",
   "screenshots": [
