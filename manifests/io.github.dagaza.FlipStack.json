@@ -1,0 +1,36 @@
+{
+  "app-id": "io.github.dagaza.FlipStack",
+  "branch": "master",
+  "title": "FlipStack",
+  "description": "Flashcard app for GNOME with spaced repetition study modes.",
+  "categories": [
+    "Education"
+  ],
+  "homepage": "https://github.com/dagaza/FlipStack",
+  "icon-path": "assets/icons/io.github.dagaza.FlipStack.svg",
+  "metainfo-path": "io.github.dagaza.FlipStack.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/dagaza/FlipStack/v1.3.0/assets/screenshots/dashboard_light.png",
+      "caption": "Activity dashboard"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/dagaza/FlipStack/v1.3.0/assets/screenshots/dashboard_dark.png",
+      "caption": "Dashboard in dark mode"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/dagaza/FlipStack/v1.3.0/assets/screenshots/flashcard_front_light.png",
+      "caption": "Flashcard review interface"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/dagaza/FlipStack/v1.3.0/assets/screenshots/deck_performance_light.png",
+      "caption": "Deck performance charts"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "dagaza/FlipStack",
+    "release": "latest",
+    "asset": "FlipStack-*-x86_64.flatpak"
+  }
+}
