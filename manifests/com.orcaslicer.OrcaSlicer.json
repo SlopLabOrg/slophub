@@ -1,0 +1,28 @@
+{
+  "app-id": "com.orcaslicer.OrcaSlicer",
+  "branch": "master",
+  "title": "OrcaSlicer",
+  "description": "Open-source 3D printer slicer with advanced calibration and printer support.",
+  "categories": [
+    "Graphics"
+  ],
+  "homepage": "https://www.orcaslicer.com",
+  "icon-path": "resources/images/OrcaSlicer.svg",
+  "metainfo-path": "scripts/flatpak/com.orcaslicer.OrcaSlicer.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.4.1/scripts/flatpak/images/1.png",
+      "caption": "A model ready to be sliced on a buildplate."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OrcaSlicer/OrcaSlicer/v2.4.1/scripts/flatpak/images/2.png",
+      "caption": "A calibration test ready to be printed out."
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "OrcaSlicer/OrcaSlicer",
+    "release": "latest",
+    "asset": "OrcaSlicer-Linux-flatpak_*_x86_64.flatpak"
+  }
+}
