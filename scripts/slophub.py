@@ -14,6 +14,7 @@ import subprocess
 import sys
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as StdET
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -422,7 +423,7 @@ def build_component_xml(
     ref: str,
     package: dict[str, Any],
     icons_root: Path,
-) -> ET.Element:
+) -> StdET.Element:
     component = ET.fromstring(
         download_bytes(
             source_file_url(package["source"], package["metainfo_path"]),
@@ -451,9 +452,13 @@ def build_component_xml(
         if existing_icon.attrib.get("type") == "cached":
             component.remove(existing_icon)
 
-    cached_64 = ET.Element("icon", {"type": "cached", "width": "64", "height": "64"})
+    cached_64 = StdET.Element(
+        "icon", {"type": "cached", "width": "64", "height": "64"}
+    )
     cached_64.text = f"{package['app_id']}.png"
-    cached_128 = ET.Element("icon", {"type": "cached", "width": "128", "height": "128"})
+    cached_128 = StdET.Element(
+        "icon", {"type": "cached", "width": "128", "height": "128"}
+    )
     cached_128.text = f"{package['app_id']}.png"
     component.insert(0, cached_128)
     component.insert(0, cached_64)
@@ -461,7 +466,7 @@ def build_component_xml(
     if not any(
         icon.attrib.get("type") == "stock" for icon in component.findall("icon")
     ):
-        stock = ET.Element("icon", {"type": "stock"})
+        stock = StdET.Element("icon", {"type": "stock"})
         stock.text = package["app_id"]
         component.insert(0, stock)
 
@@ -474,7 +479,7 @@ def build_component_xml(
             bundle_attrs["runtime"] = runtime
         if sdk:
             bundle_attrs["sdk"] = sdk
-        bundle = ET.Element("bundle", bundle_attrs)
+        bundle = StdET.Element("bundle", bundle_attrs)
         bundle.text = ref
         component.append(bundle)
 
@@ -522,12 +527,12 @@ def build_component_xml(
     return component
 
 
-def write_appstream_catalog(path: Path, components: list[ET.Element]) -> None:
-    root = ET.Element("components", {"version": "0.8", "origin": "flatpak"})
+def write_appstream_catalog(path: Path, components: list[StdET.Element]) -> None:
+    root = StdET.Element("components", {"version": "0.8", "origin": "flatpak"})
     for component in components:
         root.append(component)
-    tree = ET.ElementTree(root)
-    ET.indent(tree, space="  ")
+    tree = StdET.ElementTree(root)
+    StdET.indent(tree, space="  ")
     tree.write(path, encoding="utf-8", xml_declaration=True)
 
 
