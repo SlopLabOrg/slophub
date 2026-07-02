@@ -1,0 +1,28 @@
+{
+  "app-id": "io.github.narayanls.tacwriter",
+  "branch": "master",
+  "title": "Tac Writer",
+  "description": "Academic writing assistant for structured papers.",
+  "categories": [
+    "Office"
+  ],
+  "homepage": "https://github.com/narayanls/tac-writer",
+  "icon-path": "usr/share/icons/hicolor/scalable/apps/io.github.narayanls.tacwriter.svg",
+  "metainfo-path": "usr/share/metainfo/io.github.narayanls.tacwriter.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/narayanls/tac-writer/v1.4.4-1/screenshots/tac-main-light.png",
+      "caption": "Main editor in light mode"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/narayanls/tac-writer/v1.4.4-1/screenshots/tac-main-dark.png",
+      "caption": "Main editor in dark mode"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "narayanls/tac-writer",
+    "release": "latest",
+    "asset": "tac-writer-*.flatpak"
+  }
+}
