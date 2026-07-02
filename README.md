@@ -127,6 +127,7 @@ It includes:
 - remote metadata
 - published app list
 - app categories
+- screenshots
 - `.flatpakref` URL for each app
 - upstream release metadata
 - imported bundle URL and `sha256`

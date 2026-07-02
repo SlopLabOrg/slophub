@@ -691,6 +691,7 @@ def render_catalog(public_dir: Path, packages: list[dict[str, Any]]) -> None:
                 "categories": package["categories"],
                 "homepage_url": package["homepage"],
                 "icon_url": package["icon_url"],
+                "screenshots": package["screenshots"],
                 "flatpakref_url": f"{public_base_url}/{package['app_id']}.flatpakref",
                 "release": {
                     "name": package["source"]["release_name"],
