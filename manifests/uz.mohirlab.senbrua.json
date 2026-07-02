@@ -1,0 +1,29 @@
+{
+  "app-id": "uz.mohirlab.senbrua",
+  "branch": "master",
+  "title": "Senbrua",
+  "description": "Voice recorder with noise cancellation for Linux.",
+  "categories": [
+    "Audio",
+    "Utility"
+  ],
+  "homepage": "https://github.com/otabekoff/senbrua",
+  "icon-path": "data/icons/hicolor/scalable/apps/uz.mohirlab.senbrua.svg",
+  "metainfo-path": "debian/uz.mohirlab.senbrua/usr/share/metainfo/uz.mohirlab.senbrua.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/otabekoff/senbrua/v1.0.0/data/screenshots/2_recording.png",
+      "caption": "Recording in progress with waveform"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/otabekoff/senbrua/v1.0.0/data/screenshots/4_recordings_list_preview.png",
+      "caption": "Recordings list with metadata preview"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "otabekoff/senbrua",
+    "release": "latest",
+    "asset": "senbrua.flatpak"
+  }
+}
