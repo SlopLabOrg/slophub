@@ -23,7 +23,8 @@ Example:
   "description": "Preview and query Parquet files with DuckDB.",
   "categories": ["Development", "Database"],
   "homepage": "https://github.com/ogregorio/parquetta",
-  "icon-url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/Parquetta.svg",
+  "icon-path": "Parquetta.svg",
+  "metainfo-path": "packaging/dev.parquetta.Parquetta.metainfo.xml",
   "screenshots": [
     {
       "url": "https://raw.githubusercontent.com/ogregorio/parquetta/main/assets/Screenshot.png",
@@ -47,7 +48,9 @@ Example:
 - `description`: short app description.
 - `categories`: optional list of app categories. These values are also published in `apps.json` and merged into the generated AppStream metadata.
 - `homepage`: project page.
-- `icon-url`: public icon URL.
+- `icon-path`: path to the upstream icon file inside the source repository. Slophub fetches this file from the resolved release tag and uses it for AppStream icons and the catalog icon URL.
+- `metainfo-path`: path to the upstream AppStream metainfo file inside the source repository. Slophub fetches this file from the resolved release tag when generating AppStream metadata.
+- `icon-url`: optional public icon URL override for the catalog.
 - `screenshots`: optional list of screenshot objects with `url` and optional `caption` to inject into AppStream metadata.
 - `source.type`: currently the supported value is `github-release-asset`.
 - `source.repository`: GitHub repository in `owner/repo` format.

@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
@@ -63,6 +64,10 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if unsupported_categories:
         names = ", ".join(unsupported_categories)
         raise ValueError(f"{path}: unsupported categories: {names}")
+
+    for key in ("icon-path", "metainfo-path", "icon-url"):
+        if key in data and (not isinstance(data[key], str) or not data[key]):
+            raise ValueError(f"{path}: field {key!r} must be a non-empty string")
 
     return data
 
@@ -138,6 +143,19 @@ def resolve_github_release_asset(
     }
 
 
+def source_file_url(source: dict[str, Any], relative_path: str) -> str:
+    repository = source["repository"]
+    ref = source.get("release_tag") or source.get("release") or "HEAD"
+    quoted_path = urllib.parse.quote(relative_path, safe="/")
+    return f"https://raw.githubusercontent.com/{repository}/{ref}/{quoted_path}"
+
+
+def download_bytes(url: str) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": "slophub"})
+    with urllib.request.urlopen(request) as response:
+        return response.read()
+
+
 def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
     manifest = load_manifest(manifest_path)
     source = manifest["source"]
@@ -147,7 +165,10 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         raise ValueError(f"{manifest_path}: unsupported source type {source_type!r}")
 
     resolved_source = resolve_github_release_asset(manifest_path, source)
-    icon_url = manifest.get("icon-url") or ""
+    icon_path = manifest.get("icon-path") or ""
+    icon_url = manifest.get("icon-url") or (
+        source_file_url(resolved_source, icon_path) if icon_path else ""
+    )
 
     screenshots = []
     for entry in manifest.get("screenshots", []):
@@ -174,8 +195,10 @@ def resolve_manifest(manifest_path: Path) -> dict[str, Any]:
         "title": manifest.get("title", manifest["app-id"]),
         "description": manifest.get("description", ""),
         "categories": manifest.get("categories", []),
+        "icon_path": icon_path,
         "icon_url": icon_url,
         "homepage": manifest.get("homepage", ""),
+        "metainfo_path": manifest.get("metainfo-path", ""),
         "screenshots": screenshots,
         "source": resolved_source,
     }
@@ -304,27 +327,39 @@ def build_component_xml(
     package: dict[str, Any],
     icons_root: Path,
 ) -> ET.Element:
-    metainfo_path = first_existing_path(
-        repo_dir,
-        ref,
-        [
-            f"/files/share/metainfo/{package['app_id']}.metainfo.xml",
-            f"/export/share/metainfo/{package['app_id']}.metainfo.xml",
-        ],
-    )
-    component = ET.fromstring(repo_cat(repo_dir, ref, metainfo_path))
+    if package["metainfo_path"]:
+        component = ET.fromstring(
+            download_bytes(source_file_url(package["source"], package["metainfo_path"]))
+        )
+    else:
+        metainfo_path = first_existing_path(
+            repo_dir,
+            ref,
+            [
+                f"/files/share/metainfo/{package['app_id']}.metainfo.xml",
+                f"/export/share/metainfo/{package['app_id']}.metainfo.xml",
+            ],
+        )
+        component = ET.fromstring(repo_cat(repo_dir, ref, metainfo_path))
     metadata = parse_flatpak_metadata(repo_dir, ref)
 
-    icon_candidates = [
-        f"/files/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
-        f"/files/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
-        f"/export/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
-        f"/export/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
-    ]
-    icon_path = first_existing_path(repo_dir, ref, icon_candidates)
-    icon_source_path = icons_root / Path(icon_path).name
-    icon_source_path.parent.mkdir(parents=True, exist_ok=True)
-    icon_source_path.write_bytes(repo_cat(repo_dir, ref, icon_path))
+    if package["icon_path"]:
+        icon_source_path = icons_root / Path(package["icon_path"]).name
+        icon_source_path.parent.mkdir(parents=True, exist_ok=True)
+        icon_source_path.write_bytes(
+            download_bytes(source_file_url(package["source"], package["icon_path"]))
+        )
+    else:
+        icon_candidates = [
+            f"/files/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
+            f"/files/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
+            f"/export/share/icons/hicolor/128x128/apps/{package['app_id']}.png",
+            f"/export/share/icons/hicolor/scalable/apps/{package['app_id']}.svg",
+        ]
+        icon_path = first_existing_path(repo_dir, ref, icon_candidates)
+        icon_source_path = icons_root / Path(icon_path).name
+        icon_source_path.parent.mkdir(parents=True, exist_ok=True)
+        icon_source_path.write_bytes(repo_cat(repo_dir, ref, icon_path))
 
     for size in (64, 128):
         ensure_png_icon(
