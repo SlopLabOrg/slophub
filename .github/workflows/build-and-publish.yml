@@ -40,6 +40,7 @@ jobs:
 
       - name: Validate configuration
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           SLOPHUB_GPG_KEY_ID: ${{ vars.SLOPHUB_GPG_KEY_ID }}
           SLOPHUB_GPG_PRIVATE_KEY: ${{ secrets.SLOPHUB_GPG_PRIVATE_KEY }}
           SLOPHUB_GPG_PASSPHRASE: ${{ secrets.SLOPHUB_GPG_PASSPHRASE }}
@@ -98,6 +99,7 @@ jobs:
 
       - name: Build Flatpak repository
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           SLOPHUB_BRANCH: ${{ vars.SLOPHUB_BRANCH }}
           SLOPHUB_COLLECTION_ID: ${{ vars.SLOPHUB_COLLECTION_ID }}
           SLOPHUB_GPG_KEY_ID: ${{ vars.SLOPHUB_GPG_KEY_ID }}

@@ -25,6 +25,8 @@ jobs:
           python3 -m pip install --disable-pip-version-check cairosvg defusedxml
 
       - name: Resolve package manifests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 

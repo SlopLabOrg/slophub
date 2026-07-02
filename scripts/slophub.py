@@ -143,12 +143,19 @@ def load_manifest(path: Path) -> dict[str, Any]:
 
 
 def github_api_json(url: str) -> dict[str, Any]:
+    github_token = os.environ.get("SLOPHUB_GITHUB_TOKEN") or os.environ.get(
+        "GITHUB_TOKEN"
+    )
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "slophub",
+    }
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
     request = urllib.request.Request(
         url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "slophub",
-        },
+        headers=headers,
     )
     with urllib.request.urlopen(request, timeout=DEFAULT_HTTP_TIMEOUT) as response:
         return json.load(response)
