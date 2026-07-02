@@ -1,0 +1,25 @@
+{
+  "app-id": "io.github.filegram.Filegram",
+  "branch": "master",
+  "title": "Filegram",
+  "description": "Lightweight disk space analyzer with an interactive tree map.",
+  "categories": [
+    "System",
+    "Utility"
+  ],
+  "homepage": "https://github.com/filegram/filegram-desktop",
+  "icon-path": "assets/icon/icon-128.png",
+  "metainfo-path": "packaging/flatpak/io.github.filegram.Filegram.metainfo.xml",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/filegram/filegram-desktop/v0.2.7/packaging/flatpak/screenshot.png",
+      "caption": "Filegram analyzing disk usage with an interactive tree map"
+    }
+  ],
+  "source": {
+    "type": "github-release-asset",
+    "repository": "filegram/filegram-desktop",
+    "release": "latest",
+    "asset": "filegram-linux-x86_64.flatpak"
+  }
+}
