@@ -14,15 +14,13 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: slophub-pages
+  group: slophub-publish
   cancel-in-progress: true
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
@@ -36,21 +34,29 @@ jobs:
         run: |
           set -euo pipefail
 
-          python3 -m pip install --disable-pip-version-check cairosvg defusedxml
+          python3 -m pip install --disable-pip-version-check awscli cairosvg defusedxml
 
       - name: Validate configuration
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SLOPHUB_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SLOPHUB_R2_SECRET_ACCESS_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
           SLOPHUB_GPG_KEY_ID: ${{ vars.SLOPHUB_GPG_KEY_ID }}
           SLOPHUB_GPG_PRIVATE_KEY: ${{ secrets.SLOPHUB_GPG_PRIVATE_KEY }}
           SLOPHUB_GPG_PASSPHRASE: ${{ secrets.SLOPHUB_GPG_PASSPHRASE }}
+          SLOPHUB_R2_BUCKET: ${{ vars.SLOPHUB_R2_BUCKET }}
+          SLOPHUB_R2_ENDPOINT: ${{ vars.SLOPHUB_R2_ENDPOINT }}
         run: |
           set -euo pipefail
 
           required=(
+            AWS_ACCESS_KEY_ID
+            AWS_SECRET_ACCESS_KEY
             SLOPHUB_GPG_KEY_ID
             SLOPHUB_GPG_PRIVATE_KEY
             SLOPHUB_GPG_PASSPHRASE
+            SLOPHUB_R2_BUCKET
+            SLOPHUB_R2_ENDPOINT
           )
 
           for name in "${required[@]}"; do
@@ -157,34 +163,26 @@ jobs:
           du -sh public/* | sort -rh
           du -sh public/repo/* | sort -rh | head -30
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: slophub-pages
-          path: public
+      - name: Publish to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SLOPHUB_R2_ACCESS_KEY_ID }}
+          AWS_DEFAULT_REGION: auto
+          AWS_EC2_METADATA_DISABLED: "true"
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SLOPHUB_R2_SECRET_ACCESS_KEY }}
+          SLOPHUB_R2_BUCKET: ${{ vars.SLOPHUB_R2_BUCKET }}
+          SLOPHUB_R2_ENDPOINT: ${{ vars.SLOPHUB_R2_ENDPOINT }}
+          SLOPHUB_R2_PREFIX: ${{ vars.SLOPHUB_R2_PREFIX }}
+        run: |
+          set -euo pipefail
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+          destination="s3://${SLOPHUB_R2_BUCKET}"
+          if [ -n "${SLOPHUB_R2_PREFIX:-}" ]; then
+            destination="${destination%/}/${SLOPHUB_R2_PREFIX#/}"
+          fi
 
-    steps:
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: slophub-pages
-          path: public
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: public
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          aws s3 sync \
+            public \
+            "${destination}" \
+            --endpoint-url "${SLOPHUB_R2_ENDPOINT}" \
+            --delete \
+            --no-progress

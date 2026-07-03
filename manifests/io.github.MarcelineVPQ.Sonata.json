@@ -19,7 +19,7 @@
   "source": {
     "type": "github-release-asset",
     "repository": "MarcelineVPQ/apple-music-for-linux",
-    "release": "latest",
+    "release": "v0.12.0",
     "asset": "sonata-*-x86_64.flatpak"
   }
 }
